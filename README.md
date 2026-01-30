@@ -1,57 +1,39 @@
-# React + TypeScript + Vite
+# CLI Hub
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+![CLI Hub Screenshot](public/screenshot.png)
 
-Currently, two official plugins are available:
+## English
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+**CLI Hub** is a powerful desktop application for developers designed to organize and manage command-line workflows. It allows you to group terminal commands into workspaces, manage active ports, and run multiple isolated terminal sessions in a convenient interface.
 
-## Expanding the ESLint configuration
+### Key Features
+- **Workspaces & Commands**: Organize your projects by folders. Create named commands (e.g., `npm start`, `docker-compose up`) for each workspace.
+- **Isolated Terminal Tabs**: Run each command in its own isolated PTY session with tabbed navigation.
+- **Port Monitor**: Built-in tool to view active ports and processes. Includes a "Free Port" button to forcefully kill processes occupying specific ports.
+- **Reliable Process Management**: Graceful shutdown handling (SIGINT/SIGTERM) ensures no orphaned processes or zombie ports remain after closing the app.
+- **Auto-Recovery**: Automatically restores your workspace configuration and running sessions after a restart.
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+### Installation & Development
+1. Clone the repository.
+2. Install dependencies: `npm install`.
+3. Start in development mode: `npm run dev:all`.
+4. Build for production: `npm run dist`.
 
-```js
-export default tseslint.config({
-  extends: [
-    // Remove ...tseslint.configs.recommended and replace with this
-    ...tseslint.configs.recommendedTypeChecked,
-    // Alternatively, use this for stricter rules
-    ...tseslint.configs.strictTypeChecked,
-    // Optionally, add this for stylistic rules
-    ...tseslint.configs.stylisticTypeChecked,
-  ],
-  languageOptions: {
-    // other options...
-    parserOptions: {
-      project: ['./tsconfig.node.json', './tsconfig.app.json'],
-      tsconfigRootDir: import.meta.dirname,
-    },
-  },
-})
-```
+---
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+## Русский
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+**CLI Hub** — это мощное настольное приложение для разработчиков, предназначенное для организации и управления процессами командной строки. Оно позволяет группировать терминальные команды по рабочим областям (workspaces), управлять активными портами и запускать несколько изолированных терминальных сессий в удобном интерфейсе.
 
-export default tseslint.config({
-  extends: [
-    // other configs...
-    // Enable lint rules for React
-    reactX.configs['recommended-typescript'],
-    // Enable lint rules for React DOM
-    reactDom.configs.recommended,
-  ],
-  languageOptions: {
-    // other options...
-    parserOptions: {
-      project: ['./tsconfig.node.json', './tsconfig.app.json'],
-      tsconfigRootDir: import.meta.dirname,
-    },
-  },
-})
-```
+### Основные возможности
+- **Рабочие области и команды**: Организуйте проекты по папкам. Создавайте именованные команды (например, `npm start`, `docker-compose up`) для каждой рабочей области.
+- **Изолированные вкладки терминала**: Запускайте каждую команду в собственной изолированной PTY-сессии с переключением по вкладкам.
+- **Монитор портов**: Встроенный инструмент для просмотра активных портов и процессов. Включает кнопку «Освободить» для принудительного завершения процессов, занимающих порты.
+- **Надёжное управление процессами**: Корректная обработка завершения (SIGINT/SIGTERM) гарантирует отсутствие зависших процессов и занятых портов после закрытия приложения.
+- **Автовосстановление**: Автоматически восстанавливает конфигурацию рабочих областей и запущенные сессии после перезапуска.
+
+### Установка и разработка
+1. Клонируйте репозиторий.
+2. Установите зависимости: `npm install`.
+3. Запустите в режиме разработки: `npm run dev:all`.
+4. Соберите для продакшена: `npm run dist`.
