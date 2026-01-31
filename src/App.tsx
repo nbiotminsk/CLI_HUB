@@ -1,4 +1,4 @@
-import React, { Suspense, useEffect, useState } from "react";
+import React, { Suspense, useEffect, useRef, useState } from "react";
 import { Sidebar } from "./components/Sidebar";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 const TerminalViewLazy = React.lazy(() =>
@@ -27,6 +27,37 @@ function App() {
     closeSession,
   } = useWorkspaceStore();
   const [isPortsOpen, setIsPortsOpen] = useState(false);
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
+  const previouslyFocusedRef = useRef<HTMLElement | null>(null);
+
+  // Focus management for modal
+  useEffect(() => {
+    if (isPortsOpen) {
+      // Save currently focused element
+      previouslyFocusedRef.current = document.activeElement as HTMLElement;
+      // Focus close button when modal opens
+      requestAnimationFrame(() => {
+        closeButtonRef.current?.focus();
+      });
+    } else {
+      // Restore focus when modal closes
+      requestAnimationFrame(() => {
+        previouslyFocusedRef.current?.focus();
+      });
+    }
+  }, [isPortsOpen]);
+
+  // Handle Escape key to close modal
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (isPortsOpen && e.key === "Escape") {
+        e.preventDefault();
+        setIsPortsOpen(false);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isPortsOpen]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -222,6 +253,7 @@ function App() {
                       Монитор портов
                     </div>
                     <button
+                      ref={closeButtonRef}
                       onClick={() => setIsPortsOpen(false)}
                       className="px-3 py-1.5 text-xs rounded bg-zinc-800 hover:bg-zinc-700 transition-colors"
                       aria-label="Close ports monitor"
