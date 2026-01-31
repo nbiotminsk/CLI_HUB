@@ -208,7 +208,7 @@ function App() {
                       <div className="text-xs text-zinc-400">Загрузка…</div>
                     }
                   >
-                    <PortsMonitorLazy />
+                    <PortsMonitorLazy isOpen={isPortsOpen} />
                   </Suspense>
                 </div>
               </div>

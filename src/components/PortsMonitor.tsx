@@ -1,13 +1,20 @@
-import React, { useEffect, useState } from 'react';
-import type { PortInfo } from '../types';
+import React, { useEffect, useState } from "react";
+import type { PortInfo } from "../types";
 
 type FreeResult = { port: number; pid?: number; status: string };
 
-export function PortsMonitor() {
+const POLLING_INTERVAL_MS = 3000;
+
+interface PortsMonitorProps {
+  isOpen?: boolean;
+}
+
+export function PortsMonitor({ isOpen = true }: PortsMonitorProps) {
   const [ports, setPorts] = useState<PortInfo[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [freeing, setFreeing] = useState<Record<string, boolean>>({});
+  const [autoRefresh, setAutoRefresh] = useState(true);
 
   const refresh = async () => {
     try {
@@ -16,24 +23,29 @@ export function PortsMonitor() {
       const list = await window.electronAPI.listPorts();
       setPorts(list);
     } catch {
-      setError('Не удалось получить список портов');
+      setError("Не удалось получить список портов");
     } finally {
       setIsLoading(false);
     }
   };
 
   useEffect(() => {
+    if (!isOpen || !autoRefresh) return;
+
     refresh();
-    const id = window.setInterval(() => refresh(), 1500);
+    const id = window.setInterval(() => refresh(), POLLING_INTERVAL_MS);
     return () => window.clearInterval(id);
-  }, []);
+  }, [isOpen, autoRefresh]);
 
   const handleFree = async (row: PortInfo) => {
     const key = `${row.port}:${row.pid}`;
     try {
       setFreeing((s) => ({ ...s, [key]: true }));
-      const res: FreeResult = await window.electronAPI.freePort(row.port, row.pid);
-      if (res.status !== 'freed') {
+      const res: FreeResult = await window.electronAPI.freePort(
+        row.port,
+        row.pid,
+      );
+      if (res.status !== "freed") {
         setError(`Не удалось освободить порт ${row.port}`);
       }
       await refresh();
@@ -45,13 +57,26 @@ export function PortsMonitor() {
   return (
     <div className="w-full h-full flex flex-col">
       <div className="flex items-center justify-between mb-3">
-        <div className="text-sm font-semibold text-zinc-200">Активные порты</div>
-        <button
-          onClick={refresh}
-          className="px-3 py-1.5 text-xs rounded bg-zinc-800 hover:bg-zinc-700 transition-colors"
-        >
-          Обновить
-        </button>
+        <div className="text-sm font-semibold text-zinc-200">
+          Активные порты
+        </div>
+        <div className="flex items-center gap-2">
+          <label className="flex items-center gap-1.5 text-xs text-zinc-400 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={autoRefresh}
+              onChange={(e) => setAutoRefresh(e.target.checked)}
+              className="rounded bg-zinc-800 border-zinc-700"
+            />
+            Автообновление
+          </label>
+          <button
+            onClick={refresh}
+            className="px-3 py-1.5 text-xs rounded bg-zinc-800 hover:bg-zinc-700 transition-colors"
+          >
+            Обновить
+          </button>
+        </div>
       </div>
 
       {error && <div className="text-xs text-red-400 mb-2">{error}</div>}
@@ -60,25 +85,38 @@ export function PortsMonitor() {
         <table className="w-full text-sm">
           <thead className="sticky top-0 bg-zinc-900 border-b border-zinc-800">
             <tr>
-              <th className="text-left font-medium text-zinc-400 px-3 py-2">Порт</th>
-              <th className="text-left font-medium text-zinc-400 px-3 py-2">PID</th>
-              <th className="text-left font-medium text-zinc-400 px-3 py-2">Статус</th>
-              <th className="text-left font-medium text-zinc-400 px-3 py-2">Действия</th>
+              <th className="text-left font-medium text-zinc-400 px-3 py-2">
+                Порт
+              </th>
+              <th className="text-left font-medium text-zinc-400 px-3 py-2">
+                PID
+              </th>
+              <th className="text-left font-medium text-zinc-400 px-3 py-2">
+                Статус
+              </th>
+              <th className="text-left font-medium text-zinc-400 px-3 py-2">
+                Действия
+              </th>
             </tr>
           </thead>
           <tbody>
             {ports.length === 0 && (
               <tr>
                 <td className="px-3 py-3 text-zinc-500" colSpan={4}>
-                  {isLoading ? 'Загрузка…' : 'Нет активных портов'}
+                  {isLoading ? "Загрузка…" : "Нет активных портов"}
                 </td>
               </tr>
             )}
             {ports.map((p) => {
               const key = `${p.port}:${p.pid}`;
               return (
-                <tr key={key} className="border-b border-zinc-900/60 hover:bg-zinc-900/40">
-                  <td className="px-3 py-2 font-mono text-zinc-200">{p.port}</td>
+                <tr
+                  key={key}
+                  className="border-b border-zinc-900/60 hover:bg-zinc-900/40"
+                >
+                  <td className="px-3 py-2 font-mono text-zinc-200">
+                    {p.port}
+                  </td>
                   <td className="px-3 py-2 font-mono text-zinc-300">{p.pid}</td>
                   <td className="px-3 py-2 text-zinc-400">{p.status}</td>
                   <td className="px-3 py-2">
@@ -99,4 +137,3 @@ export function PortsMonitor() {
     </div>
   );
 }
-
