@@ -11,6 +11,18 @@ const hasReal =
   typeof window !== "undefined" &&
   !!(window as { electronAPI?: ElectronAPI }).electronAPI;
 
+// Logger utility for fallback mode
+const logger = {
+  warn: (message: string, ...args: unknown[]) => {
+    if (process.env.NODE_ENV !== "production") {
+      console.warn(`[electron.ts] ${message}`, ...args);
+    }
+  },
+  error: (message: string, ...args: unknown[]) => {
+    console.error(`[electron.ts] ${message}`, ...args);
+  },
+};
+
 const mem = {
   workspaces: [] as Workspace[],
   commandsByWs: new Map<string, WorkspaceCommand[]>(),
@@ -25,9 +37,18 @@ const mem = {
 };
 
 const fallback: ElectronAPI = {
-  selectDirectory: async () => null,
-  getWorkspaces: async () => [...mem.workspaces],
+  selectDirectory: async () => {
+    logger.warn("selectDirectory called in browser fallback - returning null");
+    return null;
+  },
+  getWorkspaces: async () => {
+    logger.warn(
+      "getWorkspaces called in browser fallback - returning mock data",
+    );
+    return [...mem.workspaces];
+  },
   addWorkspace: async (workspace: Workspace) => {
+    logger.warn("addWorkspace called in browser fallback");
     const existing =
       mem.workspaces.find((w) => w.path === workspace.path) ||
       mem.workspaces.find((w) => w.id === workspace.id);
@@ -37,6 +58,7 @@ const fallback: ElectronAPI = {
     return workspace;
   },
   updateWorkspace: async (id: string, updates: Partial<Workspace>) => {
+    logger.warn(`updateWorkspace called in browser fallback for id: ${id}`);
     const idx = mem.workspaces.findIndex((w) => w.id === id);
     if (idx !== -1) {
       const updated = {
@@ -56,18 +78,24 @@ const fallback: ElectronAPI = {
     } as Workspace;
   },
   deleteWorkspace: async (id: string) => {
+    logger.warn(`deleteWorkspace called in browser fallback for id: ${id}`);
     mem.workspaces = mem.workspaces.filter((w) => w.id !== id);
     mem.commandsByWs.delete(id);
     return id;
   },
   getWorkspaceCommands: async (_workspaceId: string) => {
-    void _workspaceId;
+    logger.warn(
+      `getWorkspaceCommands called in browser fallback for workspace: ${_workspaceId}`,
+    );
     return [...(mem.commandsByWs.get(_workspaceId) ?? [])];
   },
   addWorkspaceCommand: async (
     workspaceId: string,
     command: WorkspaceCommand,
   ) => {
+    logger.warn(
+      `addWorkspaceCommand called in browser fallback for workspace: ${workspaceId}`,
+    );
     const list = mem.commandsByWs.get(workspaceId) ?? [];
     mem.commandsByWs.set(workspaceId, [...list, command]);
     return command;
@@ -77,6 +105,9 @@ const fallback: ElectronAPI = {
     commandId: string,
     updates: Partial<WorkspaceCommand>,
   ) => {
+    logger.warn(
+      `updateWorkspaceCommand called in browser fallback for workspace: ${workspaceId}, command: ${commandId}`,
+    );
     const list = mem.commandsByWs.get(workspaceId) ?? [];
     const idx = list.findIndex((c) => c.id === commandId);
     if (idx !== -1) {
@@ -102,6 +133,9 @@ const fallback: ElectronAPI = {
     return updated;
   },
   deleteWorkspaceCommand: async (workspaceId: string, commandId: string) => {
+    logger.warn(
+      `deleteWorkspaceCommand called in browser fallback for workspace: ${workspaceId}, command: ${commandId}`,
+    );
     const list = mem.commandsByWs.get(workspaceId) ?? [];
     mem.commandsByWs.set(
       workspaceId,
@@ -109,14 +143,26 @@ const fallback: ElectronAPI = {
     );
     return commandId;
   },
-  getPackageScripts: async () => ({}),
-  getTemplates: async () => [...mem.templates],
+  getPackageScripts: async () => {
+    logger.warn(
+      "getPackageScripts called in browser fallback - returning empty",
+    );
+    return {};
+  },
+  getTemplates: async () => {
+    logger.warn(
+      "getTemplates called in browser fallback - returning mock data",
+    );
+    return [...mem.templates];
+  },
   addTemplate: async (tpl) => {
+    logger.warn("addTemplate called in browser fallback");
     const exists = mem.templates.find((t) => t.id === tpl.id);
     if (!exists) mem.templates.push(tpl);
     return tpl;
   },
   updateTemplate: async (id, updates) => {
+    logger.warn(`updateTemplate called in browser fallback for id: ${id}`);
     const idx = mem.templates.findIndex((t) => t.id === id);
     if (idx !== -1) {
       const updated = {
@@ -139,35 +185,61 @@ const fallback: ElectronAPI = {
     return created;
   },
   deleteTemplate: async (id) => {
+    logger.warn(`deleteTemplate called in browser fallback for id: ${id}`);
     mem.templates = mem.templates.filter((t) => t.id !== id);
     return id;
   },
-  listPorts: async () => [] as PortInfo[],
-  freePort: async (port: number, pid?: number) => ({
-    port,
-    pid,
-    status: "noop",
-  }),
-  startProcess: async (id: string) => ({
-    projectId: id,
-    pid: 0,
-    status: "started",
-  }),
-  interruptProcess: async (id: string) => ({
-    projectId: id,
-    status: "interrupting",
-  }),
-  stopProcess: async (id: string) => ({ projectId: id, status: "stopping" }),
-  getProcessStatus: async (id: string) =>
-    ({ projectId: id, isRunning: false, pid: 0 }) as ProcessStatus,
-  terminalWrite: async () => {},
-  terminalResize: async () => {},
-  onTerminalData: (_cb: (projectId: string, data: string) => void) => {
-    void _cb;
+  listPorts: async () => {
+    logger.warn("listPorts called in browser fallback - returning empty");
+    return [] as PortInfo[];
+  },
+  freePort: async (port: number, pid?: number) => {
+    logger.warn(`freePort called in browser fallback for port: ${port}`);
+    return {
+      port,
+      pid,
+      status: "noop",
+    };
+  },
+  startProcess: async (id: string) => {
+    logger.warn(`startProcess called in browser fallback for id: ${id}`);
+    return {
+      projectId: id,
+      pid: 0,
+      status: "started",
+    };
+  },
+  interruptProcess: async (id: string) => {
+    logger.warn(`interruptProcess called in browser fallback for id: ${id}`);
+    return {
+      projectId: id,
+      status: "interrupting",
+    };
+  },
+  stopProcess: async (id: string) => {
+    logger.warn(`stopProcess called in browser fallback for id: ${id}`);
+    return { projectId: id, status: "stopping" };
+  },
+  getProcessStatus: async (id: string) => {
+    logger.warn(`getProcessStatus called in browser fallback for id: ${id}`);
+    return { projectId: id, isRunning: false, pid: 0 } as ProcessStatus;
+  },
+  terminalWrite: async () => {
+    logger.warn("terminalWrite called in browser fallback - no-op");
+  },
+  terminalResize: async () => {
+    logger.warn("terminalResize called in browser fallback - no-op");
+  },
+  onTerminalData: () => {
+    logger.warn(
+      "onTerminalData called in browser fallback - events will not be received",
+    );
     return () => {};
   },
-  onProcessExit: (_cb: (projectId: string, exitCode: number) => void) => {
-    void _cb;
+  onProcessExit: () => {
+    logger.warn(
+      "onProcessExit called in browser fallback - events will not be received",
+    );
     return () => {};
   },
 };
