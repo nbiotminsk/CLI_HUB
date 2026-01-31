@@ -3,11 +3,59 @@ import { Sidebar } from './components/Sidebar';
 import { TerminalView } from './components/TerminalView';
 import { PortsMonitor } from './components/PortsMonitor';
 import { useWorkspaceStore } from './store/useWorkspaceStore';
-import { Play, Square, Zap } from 'lucide-react';
+import { Play, Square, Zap, Plus, X } from 'lucide-react';
 
 function App() {
-  const { workspaces, commandsByWs, openSessions, activeSessionId, setActiveSession, loadWorkspaces, openCommand, stopSession, interruptSession } = useWorkspaceStore();
+  const { workspaces, commandsByWs, openSessions, activeSessionId, setActiveSession, loadWorkspaces, openCommand, stopSession, interruptSession, createTerminalSession, closeSession } = useWorkspaceStore();
   const [isPortsOpen, setIsPortsOpen] = useState(false);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // New Terminal: Meta+T or Ctrl+T
+      if ((e.metaKey || e.ctrlKey) && (e.key === 't' || e.key === 'T')) {
+        e.preventDefault();
+        createTerminalSession();
+      }
+      
+      // Close Terminal: Meta+W or Ctrl+W
+      if ((e.metaKey || e.ctrlKey) && (e.key === 'w' || e.key === 'W')) {
+        e.preventDefault();
+        const active = useWorkspaceStore.getState().activeSessionId;
+        if (active) {
+          closeSession(active);
+        }
+      }
+
+      // Next Terminal: Ctrl+Tab
+      if (e.ctrlKey && e.key === 'Tab' && !e.shiftKey) {
+         e.preventDefault();
+         const st = useWorkspaceStore.getState();
+         if (st.openSessions.length > 1) {
+             const idx = st.openSessions.findIndex(s => s.sessionId === st.activeSessionId);
+             if (idx !== -1) {
+                 const next = st.openSessions[(idx + 1) % st.openSessions.length];
+                 st.setActiveSession(next.sessionId);
+             }
+         }
+      }
+
+      // Prev Terminal: Ctrl+Shift+Tab
+      if (e.ctrlKey && e.key === 'Tab' && e.shiftKey) {
+         e.preventDefault();
+         const st = useWorkspaceStore.getState();
+         if (st.openSessions.length > 1) {
+             const idx = st.openSessions.findIndex(s => s.sessionId === st.activeSessionId);
+             if (idx !== -1) {
+                 const prev = st.openSessions[(idx - 1 + st.openSessions.length) % st.openSessions.length];
+                 st.setActiveSession(prev.sessionId);
+             }
+         }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   useEffect(() => {
     loadWorkspaces().then(() => {
@@ -82,21 +130,35 @@ function App() {
         {/* Main Content */}
         <div className="flex-1 relative bg-black">
           {/* Tabs */}
-          {openSessions.length > 0 && (
-            <div className="h-8 bg-zinc-900 border-b border-zinc-800 flex items-center px-2 gap-2">
-              {openSessions.map((s) => (
-                <button
-                  key={s.sessionId}
-                  onClick={() => setActiveSession(s.sessionId)}
-                  className={`px-3 py-1 text-xs rounded ${activeSessionId === s.sessionId ? 'bg-zinc-800 text-white' : 'bg-zinc-900 text-zinc-400 hover:text-white hover:bg-zinc-800'}`}
-                  title={s.cwd}
+          <div className="h-8 bg-zinc-900 border-b border-zinc-800 flex items-center px-2 gap-2 overflow-x-auto">
+            {openSessions.map((s) => (
+              <div
+                key={s.sessionId}
+                className={`group flex items-center px-3 py-1 text-xs rounded cursor-pointer border border-transparent select-none ${activeSessionId === s.sessionId ? 'bg-zinc-800 text-white border-zinc-700' : 'bg-zinc-900 text-zinc-400 hover:text-white hover:bg-zinc-800'}`}
+                onClick={() => setActiveSession(s.sessionId)}
+                title={s.cwd}
+              >
+                <span className={`inline-block w-2 h-2 rounded-full mr-2 ${s.running ? 'bg-green-500' : 'bg-zinc-600'}`}></span>
+                <span className="mr-2 max-w-[150px] truncate">{s.title}</span>
+                <button 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    closeSession(s.sessionId);
+                  }}
+                  className="opacity-0 group-hover:opacity-100 hover:text-red-400 transition-opacity p-0.5 rounded hover:bg-zinc-700"
                 >
-                  <span className="inline-block w-2 h-2 rounded-full mr-2 align-middle ${s.running ? 'bg-green-500' : 'bg-zinc-600'}"></span>
-                  {s.title}
+                  <X size={12} />
                 </button>
-              ))}
-            </div>
-          )}
+              </div>
+            ))}
+            <button
+              onClick={() => createTerminalSession()}
+              className="px-2 py-1 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded transition-colors"
+              title="New Terminal (Ctrl+T)"
+            >
+              <Plus size={14} />
+            </button>
+          </div>
 
           {isPortsOpen && (
             <div className="absolute inset-0 z-40 bg-black/60 backdrop-blur-sm flex items-center justify-center p-6">
@@ -133,7 +195,13 @@ function App() {
               <div className="w-16 h-16 rounded-2xl bg-zinc-900 border border-zinc-800 flex items-center justify-center mb-2">
                  <Play size={32} className="text-zinc-700" />
               </div>
-              <p>Добавьте папку и команду, затем запустите терминал</p>
+              <p>Нет активных терминалов</p>
+              <button 
+                onClick={() => createTerminalSession()}
+                className="mt-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-500 transition-colors text-sm"
+              >
+                Создать терминал
+              </button>
             </div>
           )}
         </div>

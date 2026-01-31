@@ -173,6 +173,11 @@ async function resolveLoginShellPath(shellPath: string): Promise<string | undefi
 
 function getShellArgs(shellPath: string, commandStr: string): string[] {
   const shellBase = path.basename(shellPath).toLowerCase();
+  
+  if (!commandStr || commandStr.trim() === '') {
+      return [];
+  }
+
   if (shellBase.includes('powershell')) return ['-NoLogo', '-NoProfile', '-Command', commandStr];
   if (shellBase.includes('cmd.exe')) return ['/d', '/s', '/c', commandStr];
   if (shellBase.includes('zsh') || shellBase.includes('bash')) return ['-ilc', commandStr];
@@ -508,12 +513,13 @@ ipcMain.handle('start-process', (event, projectId: string, commandStr: string, c
   const shell = process.env.SHELL || (os.platform() === 'win32' ? 'powershell.exe' : 'bash');
   const args = getShellArgs(shell, commandStr);
   const env = { ...process.env, ...(resolvedPath ? { PATH: resolvedPath } : {}) };
+  const workingDir = cwd || os.homedir();
 
   const ptyProcess = pty.spawn(shell, args, {
     name: 'xterm-color',
     cols: 80,
     rows: 30,
-    cwd: cwd,
+    cwd: workingDir,
     env: env as any
   });
 

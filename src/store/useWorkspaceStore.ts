@@ -26,6 +26,7 @@ interface WorkspaceState {
   deleteCommand: (workspaceId: string, commandId: string) => Promise<void>;
 
   openCommand: (workspaceId: string, commandId: string) => Promise<void>;
+  createTerminalSession: (workspaceId?: string) => Promise<void>;
   closeSession: (sessionId: string) => Promise<void>;
   interruptSession: (sessionId: string) => Promise<void>;
   stopSession: (sessionId: string) => Promise<void>;
@@ -116,6 +117,39 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
       activeSessionId: session.sessionId,
     }));
     await get().updateCommand(workspaceId, commandId, { lastRunning: true });
+  },
+
+  createTerminalSession: async (workspaceId?: string) => {
+    let cwd = '';
+    let title = 'Terminal';
+
+    if (workspaceId) {
+      const ws = get().workspaces.find((w) => w.id === workspaceId);
+      if (ws) {
+        cwd = ws.path;
+        title = ws.name;
+      }
+    }
+
+    const sessionId = crypto.randomUUID();
+    // Start generic shell
+    await window.electronAPI.startProcess(sessionId, '', cwd);
+    const status = await window.electronAPI.getProcessStatus(sessionId);
+
+    const session: Session = {
+      sessionId,
+      workspaceId: workspaceId || '',
+      commandId: '',
+      title: title,
+      running: status.isRunning,
+      pid: status.pid,
+      cwd,
+    };
+
+    set((state) => ({
+      openSessions: [...state.openSessions, session],
+      activeSessionId: session.sessionId,
+    }));
   },
 
   closeSession: async (sessionId) => {
