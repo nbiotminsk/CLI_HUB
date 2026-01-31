@@ -225,18 +225,31 @@ async function resolveLoginShellPath(
   }
 }
 
-function getShellArgs(shellPath: string, commandStr: string): string[] {
-  const shellBase = path.basename(shellPath).toLowerCase();
+// Shell configuration lookup table
+const SHELL_CONFIGS: Record<string, string[]> = {
+  powershell: ["-NoLogo", "-NoProfile", "-Command"],
+  "cmd.exe": ["/d", "/s", "/c"],
+  cmd: ["/d", "/s", "/c"],
+  zsh: ["-ilc"],
+  bash: ["-ilc"],
+  sh: ["-lc"],
+};
 
+function getShellArgs(shellPath: string, commandStr: string): string[] {
   if (!commandStr || commandStr.trim() === "") {
     return [];
   }
 
-  if (shellBase.includes("powershell"))
-    return ["-NoLogo", "-NoProfile", "-Command", commandStr];
-  if (shellBase.includes("cmd.exe")) return ["/d", "/s", "/c", commandStr];
-  if (shellBase.includes("zsh") || shellBase.includes("bash"))
-    return ["-ilc", commandStr];
+  const shellBase = path.basename(shellPath).toLowerCase();
+
+  // Find matching shell config
+  for (const [key, args] of Object.entries(SHELL_CONFIGS)) {
+    if (shellBase.includes(key)) {
+      return [...args, commandStr];
+    }
+  }
+
+  // Default for unknown shells
   return ["-lc", commandStr];
 }
 
