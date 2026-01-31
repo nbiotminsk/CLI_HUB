@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import type { Workspace, WorkspaceCommand, PortInfo } from '../types';
+import { electronAPI } from '../lib/electron';
 
 type Session = {
   sessionId: string;
@@ -16,6 +17,7 @@ interface WorkspaceState {
   commandsByWs: Record<string, WorkspaceCommand[]>;
   openSessions: Session[];
   activeSessionId: string | null;
+  isWindowFocused?: boolean;
 
   loadWorkspaces: () => Promise<void>;
   addWorkspaceFromPicker: () => Promise<void>;
@@ -31,6 +33,9 @@ interface WorkspaceState {
   interruptSession: (sessionId: string) => Promise<void>;
   stopSession: (sessionId: string) => Promise<void>;
   setActiveSession: (sessionId: string | null) => void;
+  nextSession: () => void;
+  prevSession: () => void;
+  setWindowFocused: (focused: boolean) => void;
 
   restoreAutoSessions: () => Promise<void>;
 }
@@ -40,11 +45,29 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
   commandsByWs: {},
   openSessions: [],
   activeSessionId: null,
+  isWindowFocused: true,
 
   setActiveSession: (id) => set({ activeSessionId: id }),
+  nextSession: () => {
+    const st = get();
+    if (st.openSessions.length <= 1) return;
+    const idx = st.openSessions.findIndex((s) => s.sessionId === st.activeSessionId);
+    if (idx === -1) return;
+    const next = st.openSessions[(idx + 1) % st.openSessions.length];
+    set({ activeSessionId: next.sessionId });
+  },
+  prevSession: () => {
+    const st = get();
+    if (st.openSessions.length <= 1) return;
+    const idx = st.openSessions.findIndex((s) => s.sessionId === st.activeSessionId);
+    if (idx === -1) return;
+    const prev = st.openSessions[(idx - 1 + st.openSessions.length) % st.openSessions.length];
+    set({ activeSessionId: prev.sessionId });
+  },
+  setWindowFocused: (focused) => set({ isWindowFocused: focused }),
 
   loadWorkspaces: async () => {
-    const list = await window.electronAPI.getWorkspaces();
+    const list = await electronAPI.getWorkspaces();
     set({ workspaces: list });
     // Load commands for each workspace
     for (const ws of list) {
@@ -53,44 +76,68 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
   },
 
   addWorkspaceFromPicker: async () => {
-    const result = await window.electronAPI.selectDirectory();
-    if (!result) return;
+    const result = await electronAPI.selectDirectory();
+    let name: string | undefined;
+    let pathStr: string | undefined;
+    if (result) {
+      name = result.name;
+      pathStr = result.path;
+    } else {
+      // Browser fallback: try showDirectoryPicker; if not available, prompt
+      try {
+        const anyWin = window as any;
+        if (typeof anyWin.showDirectoryPicker === 'function') {
+          const handle = await anyWin.showDirectoryPicker();
+          name = handle?.name ?? 'Folder';
+          pathStr = `fs:${name}`;
+        } else {
+          const input = prompt('Введите имя папки для добавления:');
+          if (input && input.trim()) {
+            name = input.trim();
+            pathStr = `mock:${name}`;
+          }
+        }
+      } catch {
+        // ignore
+      }
+      if (!name || !pathStr) return;
+    }
     const now = new Date().toISOString();
     const ws: Workspace = {
       id: crypto.randomUUID(),
-      name: result.name,
-      path: result.path,
+      name,
+      path: pathStr,
       createdAt: now,
       updatedAt: now,
     };
-    const saved = await window.electronAPI.addWorkspace(ws);
+    const saved = await electronAPI.addWorkspace(ws);
     set((state) => ({ workspaces: [...state.workspaces, saved] }));
     await get().loadCommands(saved.id);
   },
 
   addWorkspace: async (ws) => {
-    const saved = await window.electronAPI.addWorkspace(ws);
+    const saved = await electronAPI.addWorkspace(ws);
     set((state) => ({ workspaces: [...state.workspaces, saved] }));
   },
 
   loadCommands: async (workspaceId) => {
-    const commands = await window.electronAPI.getWorkspaceCommands(workspaceId);
+    const commands = await electronAPI.getWorkspaceCommands(workspaceId);
     set((state) => ({ commandsByWs: { ...state.commandsByWs, [workspaceId]: commands } }));
   },
 
   addCommand: async (workspaceId, command) => {
-    const saved = await window.electronAPI.addWorkspaceCommand(workspaceId, command);
+    const saved = await electronAPI.addWorkspaceCommand(workspaceId, command);
     await get().loadCommands(workspaceId);
     return saved;
   },
 
   updateCommand: async (workspaceId, commandId, updates) => {
-    await window.electronAPI.updateWorkspaceCommand(workspaceId, commandId, updates);
+    await electronAPI.updateWorkspaceCommand(workspaceId, commandId, updates);
     await get().loadCommands(workspaceId);
   },
 
   deleteCommand: async (workspaceId, commandId) => {
-    await window.electronAPI.deleteWorkspaceCommand(workspaceId, commandId);
+    await electronAPI.deleteWorkspaceCommand(workspaceId, commandId);
     await get().loadCommands(workspaceId);
   },
 
@@ -101,8 +148,8 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
     if (!cmd || !ws) return;
     const sessionId = crypto.randomUUID();
     const cwd = cmd.cwd || ws.path;
-    await window.electronAPI.startProcess(sessionId, cmd.command, cwd);
-    const status = await window.electronAPI.getProcessStatus(sessionId);
+    await electronAPI.startProcess(sessionId, cmd.command, cwd);
+    const status = await electronAPI.getProcessStatus(sessionId);
     const session: Session = {
       sessionId,
       workspaceId,
@@ -133,8 +180,8 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
 
     const sessionId = crypto.randomUUID();
     // Start generic shell
-    await window.electronAPI.startProcess(sessionId, '', cwd);
-    const status = await window.electronAPI.getProcessStatus(sessionId);
+    await electronAPI.startProcess(sessionId, '', cwd);
+    const status = await electronAPI.getProcessStatus(sessionId);
 
     const session: Session = {
       sessionId,
@@ -153,22 +200,36 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
   },
 
   closeSession: async (sessionId) => {
-    const session = get().openSessions.find((s) => s.sessionId === sessionId);
+    const st = get();
+    const session = st.openSessions.find((s) => s.sessionId === sessionId);
     if (!session) return;
-    await window.electronAPI.stopProcess(sessionId);
-    set((state) => ({
-      openSessions: state.openSessions.filter((s) => s.sessionId !== sessionId),
-      activeSessionId: state.activeSessionId === sessionId ? null : state.activeSessionId,
-    }));
+    await electronAPI.stopProcess(sessionId);
+    set((state) => {
+      const idx = state.openSessions.findIndex((s) => s.sessionId === sessionId);
+      const newSessions = state.openSessions.filter((s) => s.sessionId !== sessionId);
+      let newActive = state.activeSessionId;
+      if (state.activeSessionId === sessionId) {
+        if (newSessions.length === 0) {
+          newActive = null;
+        } else {
+          const pickIndex = Math.min(idx, newSessions.length - 1);
+          newActive = newSessions[pickIndex].sessionId;
+        }
+      }
+      return {
+        openSessions: newSessions,
+        activeSessionId: newActive,
+      };
+    });
     await get().updateCommand(session.workspaceId, session.commandId, { lastRunning: false });
   },
 
   interruptSession: async (sessionId) => {
-    await window.electronAPI.interruptProcess(sessionId);
+    await electronAPI.interruptProcess(sessionId);
   },
 
   stopSession: async (sessionId) => {
-    await window.electronAPI.stopProcess(sessionId);
+    await electronAPI.stopProcess(sessionId);
     set((state) => ({
       openSessions: state.openSessions.map((s) => s.sessionId === sessionId ? { ...s, running: false } : s),
     }));

@@ -142,9 +142,7 @@ export const Sidebar: React.FC = () => {
                         <button
                           onClick={() => handleAddCommand(ws.id)}
                           className="px-3 py-1.5 text-xs rounded bg-blue-600 hover:bg-blue-500 text-white"
-                        >
-                          Сохранить
-                        </button>
+                        >Сохранить</button>
                         <button
                           onClick={() => { setAddingCommandWsId(null); setNewCommandName(''); setNewCommandCmd(''); }}
                           className="px-3 py-1.5 text-xs rounded bg-zinc-800 hover:bg-zinc-700"

@@ -4,6 +4,7 @@ import { TerminalView } from './components/TerminalView';
 import { PortsMonitor } from './components/PortsMonitor';
 import { useWorkspaceStore } from './store/useWorkspaceStore';
 import { Play, Square, Zap, Plus, X } from 'lucide-react';
+import { electronAPI } from './lib/electron';
 
 function App() {
   const { workspaces, commandsByWs, openSessions, activeSessionId, setActiveSession, loadWorkspaces, openCommand, stopSession, interruptSession, createTerminalSession, closeSession } = useWorkspaceStore();
@@ -29,27 +30,13 @@ function App() {
       // Next Terminal: Ctrl+Tab
       if (e.ctrlKey && e.key === 'Tab' && !e.shiftKey) {
          e.preventDefault();
-         const st = useWorkspaceStore.getState();
-         if (st.openSessions.length > 1) {
-             const idx = st.openSessions.findIndex(s => s.sessionId === st.activeSessionId);
-             if (idx !== -1) {
-                 const next = st.openSessions[(idx + 1) % st.openSessions.length];
-                 st.setActiveSession(next.sessionId);
-             }
-         }
+         useWorkspaceStore.getState().nextSession();
       }
 
       // Prev Terminal: Ctrl+Shift+Tab
       if (e.ctrlKey && e.key === 'Tab' && e.shiftKey) {
          e.preventDefault();
-         const st = useWorkspaceStore.getState();
-         if (st.openSessions.length > 1) {
-             const idx = st.openSessions.findIndex(s => s.sessionId === st.activeSessionId);
-             if (idx !== -1) {
-                 const prev = st.openSessions[(idx - 1 + st.openSessions.length) % st.openSessions.length];
-                 st.setActiveSession(prev.sessionId);
-             }
-         }
+         useWorkspaceStore.getState().prevSession();
       }
     };
 
@@ -57,6 +44,16 @@ function App() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
+  useEffect(() => {
+    const onFocus = () => useWorkspaceStore.getState().setWindowFocused(true);
+    const onBlur = () => useWorkspaceStore.getState().setWindowFocused(false);
+    window.addEventListener('focus', onFocus);
+    window.addEventListener('blur', onBlur);
+    return () => {
+      window.removeEventListener('focus', onFocus);
+      window.removeEventListener('blur', onBlur);
+    };
+  }, []);
   useEffect(() => {
     loadWorkspaces().then(() => {
       useWorkspaceStore.getState().restoreAutoSessions();
@@ -66,11 +63,11 @@ function App() {
   const activeSession = openSessions.find(s => s.sessionId === activeSessionId);
 
   useEffect(() => {
-    const cleanup = window.electronAPI.onProcessExit((sessionId) => {
+    const cleanup = (electronAPI?.onProcessExit?.((sessionId) => {
       const st = useWorkspaceStore.getState();
       const updated = st.openSessions.map(s => s.sessionId === sessionId ? { ...s, running: false } : s);
       useWorkspaceStore.setState({ openSessions: updated });
-    });
+    }) ?? (() => {}));
     return () => cleanup();
   }, []);
 

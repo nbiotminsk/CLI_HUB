@@ -28,4 +28,10 @@ export default defineConfig({
     }), 
     tsconfigPaths()
   ],
+  test: {
+    environment: 'jsdom',
+    setupFiles: ['./vitest.setup.ts'],
+    css: true,
+    globals: true
+  }
 })

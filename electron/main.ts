@@ -132,8 +132,7 @@ async function terminatePty(projectId: string, mode: 'interrupt' | 'stop'): Prom
       try {
         ptyProcess.write('\x03');
       } catch {}
-      await sleep(4000);
-      if (!isPidAlive(pid)) return;
+      return;
     }
 
     await killProcessTree(pid, 'SIGTERM');
