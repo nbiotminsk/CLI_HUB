@@ -240,6 +240,48 @@ function getShellArgs(shellPath: string, commandStr: string): string[] {
   return ["-lc", commandStr];
 }
 
+/**
+ * Validates a command string for potentially dangerous patterns.
+ * Returns null if command is safe, or an error message if dangerous.
+ */
+function validateCommand(command: string): string | null {
+  const trimmed = command.trim();
+  if (!trimmed) return null;
+
+  // Check for command chaining that could bypass restrictions
+  if (/[;&|`$]\s*\(/.test(trimmed)) {
+    return "Command contains subshell injection pattern";
+  }
+
+  // Check for input redirection from user-controlled sources
+  if (/<\s*(\/dev\/tcp|\/dev\/udp|\$\([^)]*\))/.test(trimmed)) {
+    return "Command contains dangerous input redirection";
+  }
+
+  // Check for output redirection to sensitive locations
+  if (
+    />\s*(\/etc\/|\/proc\/|\/sys\/|\/dev\/null)/.test(trimmed) ||
+    />\s*1\s*>&?\s*[0-2]/.test(trimmed)
+  ) {
+    return "Command contains dangerous output redirection";
+  }
+
+  // Check for command substitution with dangerous patterns
+  if (
+    /\$\([^)]*\)\s*[;&|`$]/.test(trimmed) ||
+    /\$\{[^}]*\}\s*[;&|`$]/.test(trimmed)
+  ) {
+    return "Command contains dangerous command substitution";
+  }
+
+  // Check for curl/wget downloading and executing
+  if (/(curl|wget)\s+.*[|;](`|bash|sh|ash|dash|zsh)/i.test(trimmed)) {
+    return "Command attempts to download and execute code";
+  }
+
+  return null;
+}
+
 function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1200,
@@ -688,6 +730,12 @@ ipcMain.handle(
 ipcMain.handle(
   "start-process",
   (event, projectId: string, commandStr: string, cwd: string) => {
+    // Validate command for dangerous patterns
+    const validationError = validateCommand(commandStr);
+    if (validationError) {
+      throw new Error(`Command validation failed: ${validationError}`);
+    }
+
     if (ptyProcesses[projectId]) {
       // Already running
       return { projectId, pid: ptyProcesses[projectId].pid, status: "running" };
