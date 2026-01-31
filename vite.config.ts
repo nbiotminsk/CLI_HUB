@@ -41,5 +41,6 @@ export default defineConfig({
     setupFiles: ["./vitest.setup.ts"],
     css: true,
     globals: true,
+    include: ["src/**/*.test.{ts,tsx}"],
   },
 } as UserConfig);
