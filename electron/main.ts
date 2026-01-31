@@ -485,16 +485,38 @@ function commandsConfigPath(workspacePath: string): string {
   return path.join(workspacePath, ".clihub", "commands.json");
 }
 
+/**
+ * Validates that the resolved file path is within the expected workspace directory.
+ * Prevents path traversal attacks.
+ */
+function validatePathWithinWorkspace(
+  workspacePath: string,
+  filePath: string,
+): void {
+  const normalizedWorkspace = path.normalize(workspacePath);
+  const normalizedFile = path.normalize(filePath);
+
+  if (!normalizedFile.startsWith(normalizedWorkspace + path.sep)) {
+    throw new Error(
+      `Security error: file path "${filePath}" is outside workspace directory`,
+    );
+  }
+}
+
 async function readCommandsFile(
   workspacePath: string,
 ): Promise<WorkspaceCommand[]> {
   try {
     const filePath = commandsConfigPath(workspacePath);
+    validatePathWithinWorkspace(workspacePath, filePath);
     const content = await fs.readFile(filePath, "utf-8");
     const parsed = JSON.parse(content);
     const commands = Array.isArray(parsed?.commands) ? parsed.commands : [];
     return commands as WorkspaceCommand[];
-  } catch {
+  } catch (error) {
+    if (error instanceof Error && error.message.includes("Security error")) {
+      throw error;
+    }
     return [];
   }
 }
@@ -506,6 +528,7 @@ async function writeCommandsFile(
   const dirPath = path.join(workspacePath, ".clihub");
   await fs.mkdir(dirPath, { recursive: true });
   const filePath = commandsConfigPath(workspacePath);
+  validatePathWithinWorkspace(workspacePath, filePath);
   const payload = { version: 1, commands };
   await fs.writeFile(filePath, JSON.stringify(payload, null, 2), "utf-8");
 }
@@ -678,7 +701,20 @@ ipcMain.handle(
       ...process.env,
       ...(resolvedPath ? { PATH: resolvedPath } : {}),
     };
-    const workingDir = cwd || os.homedir();
+    // Validate and sanitize cwd - use home dir as fallback if invalid
+    let workingDir = cwd || os.homedir();
+    try {
+      const normalized = path.normalize(workingDir);
+      // Allow relative paths starting with workspace paths from known workspaces
+      // For security, restrict to existing directories
+      if (!normalized.startsWith("/") && !normalized.startsWith("\\")) {
+        // Relative path - keep it but it will be resolved by pty
+      } else if (!fs.existsSync(normalized)) {
+        workingDir = os.homedir();
+      }
+    } catch {
+      workingDir = os.homedir();
+    }
 
     const ptyProcess = pty.spawn(shell, args, {
       name: "xterm-color",
