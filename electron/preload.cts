@@ -12,6 +12,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   addWorkspaceCommand: (workspaceId: string, command: any) => ipcRenderer.invoke('add-workspace-command', workspaceId, command),
   updateWorkspaceCommand: (workspaceId: string, commandId: string, updates: any) => ipcRenderer.invoke('update-workspace-command', workspaceId, commandId, updates),
   deleteWorkspaceCommand: (workspaceId: string, commandId: string) => ipcRenderer.invoke('delete-workspace-command', workspaceId, commandId),
+  getPackageScripts: (workspaceId: string) => ipcRenderer.invoke('get-package-scripts', workspaceId),
 
   // Ports
   listPorts: () => ipcRenderer.invoke('list-ports'),
@@ -37,5 +38,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
     const handler = (_event: any, projectId: string, exitCode: number) => callback(projectId, exitCode);
     ipcRenderer.on('process-exit', handler);
     return () => ipcRenderer.removeListener('process-exit', handler);
-  }
+  },
+
+  getTemplates: () => ipcRenderer.invoke('get-templates'),
+  addTemplate: (tpl: any) => ipcRenderer.invoke('add-template', tpl),
+  updateTemplate: (id: string, updates: any) => ipcRenderer.invoke('update-template', id, updates),
+  deleteTemplate: (id: string) => ipcRenderer.invoke('delete-template', id),
 });

@@ -42,10 +42,20 @@ interface WorkspaceCommand {
   updatedAt: string;
 }
 
-const store = new Store<{ workspaces: Workspace[]; projects: Project[] }>({
+type CommandTemplate = {
+  id: string;
+  name: string;
+  command: string;
+  category?: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+const store = new Store<{ workspaces: Workspace[]; projects: Project[]; templates: CommandTemplate[] }>({
   defaults: {
     workspaces: [],
-    projects: []
+    projects: [],
+    templates: []
   }
 });
 
@@ -121,6 +131,8 @@ async function killProcessTree(rootPid: number, signal: NodeJS.Signals): Promise
   }
 }
 
+const shellOnlyByProject: Record<string, boolean> = {};
+
 async function terminatePty(projectId: string, mode: 'interrupt' | 'stop'): Promise<void> {
   if (stopPromises[projectId]) return stopPromises[projectId];
   const ptyProcess = ptyProcesses[projectId];
@@ -129,9 +141,19 @@ async function terminatePty(projectId: string, mode: 'interrupt' | 'stop'): Prom
 
   const task = (async () => {
     if (mode === 'interrupt') {
-      try {
-        ptyProcess.write('\x03');
-      } catch {}
+      const shellOnly = !!shellOnlyByProject[projectId];
+      try { ptyProcess.write('\x03'); } catch {}
+      if (shellOnly) return;
+      await sleep(1500);
+      if (!isPidAlive(pid)) return;
+      await killProcessTree(pid, 'SIGINT');
+      await sleep(1500);
+      if (!isPidAlive(pid)) return;
+      await killProcessTree(pid, 'SIGTERM');
+      await sleep(2000);
+      if (!isPidAlive(pid)) return;
+      await killProcessTree(pid, 'SIGKILL');
+      await sleep(500);
       return;
     }
 
@@ -148,6 +170,7 @@ async function terminatePty(projectId: string, mode: 'interrupt' | 'stop'): Prom
       } catch {}
       delete ptyProcesses[projectId];
       delete stopPromises[projectId];
+      delete shellOnlyByProject[projectId];
     });
 
   stopPromises[projectId] = task;
@@ -292,6 +315,12 @@ ipcMain.handle('select-directory', async () => {
   };
 });
 
+ipcMain.handle('get-package-scripts', async (_event, workspaceId: string) => {
+  const ws = getWorkspaceById(workspaceId);
+  if (!ws) return {};
+  return readPackageJsonScripts(ws.path);
+});
+
 type PortInfo = {
   port: number;
   pid: number;
@@ -339,6 +368,33 @@ ipcMain.handle('list-ports', async () => {
   return listListeningPorts();
 });
 
+ipcMain.handle('get-templates', async () => {
+  return store.get('templates');
+});
+
+ipcMain.handle('add-template', async (_event, tpl: CommandTemplate) => {
+  const list = store.get('templates');
+  const exists = list.find(t => t.id === tpl.id);
+  const next = exists ? list : [...list, tpl];
+  store.set('templates', next);
+  return tpl;
+});
+
+ipcMain.handle('update-template', async (_event, id: string, updates: Partial<CommandTemplate>) => {
+  const list = store.get('templates');
+  const idx = list.findIndex(t => t.id === id);
+  if (idx === -1) throw new Error('Template not found');
+  const updated = { ...list[idx], ...updates, updatedAt: new Date().toISOString() };
+  list[idx] = updated;
+  store.set('templates', list);
+  return updated as CommandTemplate;
+});
+
+ipcMain.handle('delete-template', async (_event, id: string) => {
+  const list = store.get('templates');
+  store.set('templates', list.filter(t => t.id !== id));
+  return id;
+});
 ipcMain.handle('free-port', async (event, port: number, pid?: number) => {
   const targetPid = pid ?? (await (async () => {
     try {
@@ -523,6 +579,7 @@ ipcMain.handle('start-process', (event, projectId: string, commandStr: string, c
   });
 
   ptyProcesses[projectId] = ptyProcess;
+  shellOnlyByProject[projectId] = args.length === 0;
 
   ptyProcess.onData((data) => {
     if (mainWindow && !mainWindow.isDestroyed()) {

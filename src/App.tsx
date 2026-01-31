@@ -65,8 +65,14 @@ function App() {
   useEffect(() => {
     const cleanup = (electronAPI?.onProcessExit?.((sessionId) => {
       const st = useWorkspaceStore.getState();
-      const updated = st.openSessions.map(s => s.sessionId === sessionId ? { ...s, running: false } : s);
-      useWorkspaceStore.setState({ openSessions: updated });
+      const session = st.openSessions.find(s => s.sessionId === sessionId);
+      if (!session) return;
+      if (session.commandId) {
+        st.restartSessionToShell(sessionId);
+      } else {
+        const updated = st.openSessions.map(s => s.sessionId === sessionId ? { ...s, running: false } : s);
+        useWorkspaceStore.setState({ openSessions: updated });
+      }
     }) ?? (() => {}));
     return () => cleanup();
   }, []);

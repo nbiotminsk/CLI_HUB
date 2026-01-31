@@ -13,6 +13,16 @@ export interface WorkspaceCommand {
   cwd?: string;
   lastRunning?: boolean;
   autoStart?: boolean;
+  category?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CommandTemplate {
+  id: string;
+  name: string;
+  command: string;
+  category?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -41,6 +51,12 @@ export interface ElectronAPI {
   addWorkspaceCommand: (workspaceId: string, command: WorkspaceCommand) => Promise<WorkspaceCommand>;
   updateWorkspaceCommand: (workspaceId: string, commandId: string, updates: Partial<WorkspaceCommand>) => Promise<WorkspaceCommand>;
   deleteWorkspaceCommand: (workspaceId: string, commandId: string) => Promise<string>;
+  getPackageScripts: (workspaceId: string) => Promise<Record<string, string>>;
+
+  getTemplates: () => Promise<CommandTemplate[]>;
+  addTemplate: (tpl: CommandTemplate) => Promise<CommandTemplate>;
+  updateTemplate: (id: string, updates: Partial<CommandTemplate>) => Promise<CommandTemplate>;
+  deleteTemplate: (id: string) => Promise<string>;
 
   listPorts: () => Promise<PortInfo[]>;
   freePort: (port: number, pid?: number) => Promise<{ port: number; pid?: number; status: string }>;

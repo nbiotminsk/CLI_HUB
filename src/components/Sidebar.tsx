@@ -1,14 +1,26 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Plus, Play, Square, Terminal as TerminalIcon } from 'lucide-react';
 import { useWorkspaceStore } from '../store/useWorkspaceStore';
-import type { WorkspaceCommand } from '../types';
+import type { WorkspaceCommand, CommandTemplate } from '../types';
+import { TemplatesModal } from './TemplatesModal';
 
 export const Sidebar: React.FC = () => {
-  const { workspaces, commandsByWs, openSessions, activeSessionId, setActiveSession, addWorkspaceFromPicker, openCommand, stopSession } = useWorkspaceStore();
+  const { workspaces, commandsByWs, scriptsByWs, templates, openSessions, setActiveSession, addWorkspaceFromPicker, openCommand, stopSession, loadTemplates, loadPackageScripts } = useWorkspaceStore();
   const [expandedWsId, setExpandedWsId] = useState<string | null>(null);
   const [addingCommandWsId, setAddingCommandWsId] = useState<string | null>(null);
   const [newCommandName, setNewCommandName] = useState('');
   const [newCommandCmd, setNewCommandCmd] = useState('');
+  const [previewCmd, setPreviewCmd] = useState<{ wsId: string; cmd: WorkspaceCommand } | null>(null);
+  const [templatesOpenForWs, setTemplatesOpenForWs] = useState<string | null>(null);
+  const presets = useMemo<CommandTemplate[]>(() => [
+    { id: 'preset-dev', name: 'NPM run dev', command: 'npm run dev', category: 'npm', createdAt: '', updatedAt: '' },
+    { id: 'preset-build', name: 'NPM run build', command: 'npm run build', category: 'npm', createdAt: '', updatedAt: '' },
+    { id: 'preset-start', name: 'NPM start', command: 'npm start', category: 'npm', createdAt: '', updatedAt: '' },
+  ], []);
+
+  useEffect(() => {
+    loadTemplates();
+  }, [loadTemplates]);
 
   const handleStart = async (e: React.MouseEvent, workspaceId: string, command: WorkspaceCommand) => {
     e.stopPropagation();
@@ -84,6 +96,16 @@ export const Sidebar: React.FC = () => {
                   {commands.length === 0 && (
                     <div className="text-xs text-zinc-500">Нет команд</div>
                   )}
+                  <div className="flex items-center gap-2 py-1">
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setTemplatesOpenForWs(ws.id); }}
+                      className="text-xs px-2 py-1 rounded bg-zinc-800 hover:bg-zinc-700 text-white"
+                    >Шаблоны…</button>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); loadPackageScripts(ws.id); setTemplatesOpenForWs(ws.id); }}
+                      className="text-xs px-2 py-1 rounded bg-zinc-800 hover:bg-zinc-700 text-white"
+                    >Скрипты…</button>
+                  </div>
                   {commands.map((cmd) => {
                     const runningSession = openSessions.find((s) => s.workspaceId === ws.id && s.commandId === cmd.id && s.running);
                     const isRunning = !!runningSession;
@@ -113,7 +135,7 @@ export const Sidebar: React.FC = () => {
                             </button>
                           ) : (
                             <button
-                              onClick={(e) => handleStart(e, ws.id, cmd)}
+                              onClick={(e) => { e.stopPropagation(); setPreviewCmd({ wsId: ws.id, cmd }); }}
                               className="p-1 rounded text-green-400 hover:bg-green-400/10"
                               title="Start"
                             >
@@ -138,6 +160,7 @@ export const Sidebar: React.FC = () => {
                         placeholder="Команда (например, npm start)"
                         className="w-full bg-zinc-800 border border-zinc-700 rounded p-2 text-white"
                       />
+                      
                       <div className="flex gap-2">
                         <button
                           onClick={() => handleAddCommand(ws.id)}
@@ -158,6 +181,38 @@ export const Sidebar: React.FC = () => {
           );
         })}
       </div>
+      {previewCmd && (
+        <div className="p-2 border-t border-zinc-800">
+          <div className="text-xs text-zinc-400 mb-2">Предпросмотр запуска</div>
+          <div className="text-xs text-white bg-zinc-800 rounded p-2 mb-2">
+            <div>Имя: {previewCmd.cmd.name}</div>
+            <div>Команда: <span className="font-mono">{previewCmd.cmd.command}</span></div>
+            <div>Категория: {previewCmd.cmd.category || '—'}</div>
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={() => { openCommand(previewCmd.wsId, previewCmd.cmd.id); setPreviewCmd(null); }}
+              className="px-3 py-1.5 text-xs rounded bg-green-600 hover:bg-green-500 text-white"
+            >Запустить</button>
+            <button
+              onClick={() => setPreviewCmd(null)}
+              className="px-3 py-1.5 text-xs rounded bg-zinc-800 hover:bg-zinc-700 text-white"
+            >Отмена</button>
+          </div>
+        </div>
+      )}
+      {templatesOpenForWs && (
+        <TemplatesModal
+          workspaceId={templatesOpenForWs}
+          isOpen={!!templatesOpenForWs}
+          onClose={() => setTemplatesOpenForWs(null)}
+          onApply={(name, command) => {
+            setNewCommandName(name);
+            setNewCommandCmd(command);
+            setTemplatesOpenForWs(null);
+          }}
+        />
+      )}
       
       <div className="p-4 border-t border-zinc-800">
         <div className="text-xs text-zinc-500 text-center select-none">

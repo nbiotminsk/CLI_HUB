@@ -5,6 +5,7 @@ const hasReal = typeof window !== 'undefined' && !!(window as any).electronAPI;
 const mem = {
   workspaces: [] as Workspace[],
   commandsByWs: new Map<string, WorkspaceCommand[]>(),
+  templates: [] as { id: string; name: string; command: string; category?: string; createdAt: string; updatedAt: string }[],
 };
 
 const fallback: ElectronAPI = {
@@ -58,6 +59,28 @@ const fallback: ElectronAPI = {
     const list = mem.commandsByWs.get(workspaceId) ?? [];
     mem.commandsByWs.set(workspaceId, list.filter(c => c.id !== commandId));
     return commandId;
+  },
+  getPackageScripts: async (_workspaceId: string) => ({}),
+  getTemplates: async () => [...mem.templates],
+  addTemplate: async (tpl) => {
+    const exists = mem.templates.find(t => t.id === tpl.id);
+    if (!exists) mem.templates.push(tpl);
+    return tpl;
+  },
+  updateTemplate: async (id, updates) => {
+    const idx = mem.templates.findIndex(t => t.id === id);
+    if (idx !== -1) {
+      const updated = { ...mem.templates[idx], ...updates, updatedAt: new Date().toISOString() };
+      mem.templates[idx] = updated;
+      return updated as any;
+    }
+    const created = { id, name: updates.name || '', command: updates.command || '', category: updates.category, createdAt: updates['createdAt'] || new Date().toISOString(), updatedAt: new Date().toISOString() };
+    mem.templates.push(created);
+    return created as any;
+  },
+  deleteTemplate: async (id) => {
+    mem.templates = mem.templates.filter(t => t.id !== id);
+    return id;
   },
   listPorts: async () => [] as PortInfo[],
   freePort: async (port: number, pid?: number) => ({ port, pid, status: 'noop' }),

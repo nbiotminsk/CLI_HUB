@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { Workspace, WorkspaceCommand, PortInfo } from '../types';
+import type { Workspace, WorkspaceCommand, CommandTemplate } from '../types';
 import { electronAPI } from '../lib/electron';
 
 type Session = {
@@ -15,6 +15,8 @@ type Session = {
 interface WorkspaceState {
   workspaces: Workspace[];
   commandsByWs: Record<string, WorkspaceCommand[]>;
+  scriptsByWs: Record<string, Record<string, string>>;
+  templates: CommandTemplate[];
   openSessions: Session[];
   activeSessionId: string | null;
   isWindowFocused?: boolean;
@@ -23,6 +25,11 @@ interface WorkspaceState {
   addWorkspaceFromPicker: () => Promise<void>;
   addWorkspace: (ws: Workspace) => Promise<void>;
   loadCommands: (workspaceId: string) => Promise<void>;
+  loadPackageScripts: (workspaceId: string) => Promise<void>;
+  loadTemplates: () => Promise<void>;
+  addTemplate: (tpl: CommandTemplate) => Promise<CommandTemplate>;
+  updateTemplate: (id: string, updates: Partial<CommandTemplate>) => Promise<void>;
+  deleteTemplate: (id: string) => Promise<void>;
   addCommand: (workspaceId: string, command: WorkspaceCommand) => Promise<WorkspaceCommand>;
   updateCommand: (workspaceId: string, commandId: string, updates: Partial<WorkspaceCommand>) => Promise<void>;
   deleteCommand: (workspaceId: string, commandId: string) => Promise<void>;
@@ -36,6 +43,7 @@ interface WorkspaceState {
   nextSession: () => void;
   prevSession: () => void;
   setWindowFocused: (focused: boolean) => void;
+  restartSessionToShell: (sessionId: string) => Promise<void>;
 
   restoreAutoSessions: () => Promise<void>;
 }
@@ -43,6 +51,8 @@ interface WorkspaceState {
 export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
   workspaces: [],
   commandsByWs: {},
+  scriptsByWs: {},
+  templates: [],
   openSessions: [],
   activeSessionId: null,
   isWindowFocused: true,
@@ -65,6 +75,17 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
     set({ activeSessionId: prev.sessionId });
   },
   setWindowFocused: (focused) => set({ isWindowFocused: focused }),
+  restartSessionToShell: async (sessionId) => {
+    const st = get();
+    const session = st.openSessions.find(s => s.sessionId === sessionId);
+    if (!session) return;
+    const cwd = session.cwd || '';
+    await electronAPI.startProcess(sessionId, '', cwd);
+    const status = await electronAPI.getProcessStatus(sessionId);
+    set((state) => ({
+      openSessions: state.openSessions.map(s => s.sessionId === sessionId ? { ...s, running: status.isRunning, pid: status.pid } : s),
+    }));
+  },
 
   loadWorkspaces: async () => {
     const list = await electronAPI.getWorkspaces();
@@ -72,6 +93,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
     // Load commands for each workspace
     for (const ws of list) {
       await get().loadCommands(ws.id);
+      await get().loadPackageScripts(ws.id);
     }
   },
 
@@ -123,6 +145,27 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
   loadCommands: async (workspaceId) => {
     const commands = await electronAPI.getWorkspaceCommands(workspaceId);
     set((state) => ({ commandsByWs: { ...state.commandsByWs, [workspaceId]: commands } }));
+  },
+  loadPackageScripts: async (workspaceId) => {
+    const scripts = await electronAPI.getPackageScripts(workspaceId);
+    set((state) => ({ scriptsByWs: { ...state.scriptsByWs, [workspaceId]: scripts } }));
+  },
+  loadTemplates: async () => {
+    const list = await electronAPI.getTemplates();
+    set({ templates: list });
+  },
+  addTemplate: async (tpl) => {
+    const saved = await electronAPI.addTemplate(tpl);
+    set((state) => ({ templates: [...state.templates, saved] }));
+    return saved;
+  },
+  updateTemplate: async (id, updates) => {
+    const updated = await electronAPI.updateTemplate(id, updates);
+    set((state) => ({ templates: state.templates.map(t => t.id === id ? updated : t) }));
+  },
+  deleteTemplate: async (id) => {
+    await electronAPI.deleteTemplate(id);
+    set((state) => ({ templates: state.templates.filter(t => t.id !== id) }));
   },
 
   addCommand: async (workspaceId, command) => {
