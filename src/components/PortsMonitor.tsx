@@ -66,34 +66,52 @@ export function PortsMonitor({ isOpen = true }: PortsMonitorProps) {
               checked={autoRefresh}
               onChange={(e) => setAutoRefresh(e.target.checked)}
               className="rounded bg-zinc-800 border-zinc-700"
+              aria-label="Auto-refresh ports"
             />
             Автообновление
           </label>
           <button
             onClick={refresh}
             className="px-3 py-1.5 text-xs rounded bg-zinc-800 hover:bg-zinc-700 transition-colors"
+            aria-label="Refresh ports list"
           >
             Обновить
           </button>
         </div>
       </div>
 
-      {error && <div className="text-xs text-red-400 mb-2">{error}</div>}
+      {error && (
+        <div className="text-xs text-red-400 mb-2" role="alert">
+          {error}
+        </div>
+      )}
 
       <div className="flex-1 overflow-auto border border-zinc-800 rounded">
-        <table className="w-full text-sm">
+        <table className="w-full text-sm" role="grid" aria-label="Ports list">
           <thead className="sticky top-0 bg-zinc-900 border-b border-zinc-800">
             <tr>
-              <th className="text-left font-medium text-zinc-400 px-3 py-2">
+              <th
+                className="text-left font-medium text-zinc-400 px-3 py-2"
+                scope="col"
+              >
                 Порт
               </th>
-              <th className="text-left font-medium text-zinc-400 px-3 py-2">
+              <th
+                className="text-left font-medium text-zinc-400 px-3 py-2"
+                scope="col"
+              >
                 PID
               </th>
-              <th className="text-left font-medium text-zinc-400 px-3 py-2">
+              <th
+                className="text-left font-medium text-zinc-400 px-3 py-2"
+                scope="col"
+              >
                 Статус
               </th>
-              <th className="text-left font-medium text-zinc-400 px-3 py-2">
+              <th
+                className="text-left font-medium text-zinc-400 px-3 py-2"
+                scope="col"
+              >
                 Действия
               </th>
             </tr>
@@ -123,6 +141,7 @@ export function PortsMonitor({ isOpen = true }: PortsMonitorProps) {
                       onClick={() => handleFree(p)}
                       disabled={!!freeing[key]}
                       className="px-3 py-1.5 text-xs rounded bg-red-600 hover:bg-red-500 disabled:opacity-50 transition-colors"
+                      aria-label={`Free port ${p.port}`}
                     >
                       Освободить
                     </button>

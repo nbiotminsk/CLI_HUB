@@ -126,6 +126,7 @@ function App() {
               <button
                 onClick={() => setIsPortsOpen(true)}
                 className="px-3 py-1.5 text-xs rounded bg-zinc-800 hover:bg-zinc-700 transition-colors"
+                aria-label="Open ports monitor"
               >
                 Ports
               </button>
@@ -136,18 +137,20 @@ function App() {
                     onClick={() => interruptSession(activeSession.sessionId)}
                     disabled={!activeSession.running}
                     className="flex items-center gap-2 px-3 py-1.5 text-xs rounded bg-zinc-800 hover:bg-zinc-700 disabled:opacity-40 disabled:hover:bg-zinc-800 transition-colors"
+                    aria-label="Interrupt current process (Ctrl+C)"
                     title="Ctrl+C"
                   >
-                    <Zap size={14} />
+                    <Zap size={14} aria-hidden="true" />
                     Ctrl+C
                   </button>
                   <button
                     onClick={() => stopSession(activeSession.sessionId)}
                     disabled={!activeSession.running}
                     className="flex items-center gap-2 px-3 py-1.5 text-xs rounded bg-zinc-800 hover:bg-zinc-700 disabled:opacity-40 disabled:hover:bg-zinc-800 transition-colors"
+                    aria-label="Stop current process"
                     title="Kill"
                   >
-                    <Square size={14} />
+                    <Square size={14} aria-hidden="true" />
                     Stop
                   </button>
                 </>
@@ -158,16 +161,30 @@ function App() {
           {/* Main Content */}
           <div className="flex-1 relative bg-black">
             {/* Tabs */}
-            <div className="h-8 bg-zinc-900 border-b border-zinc-800 flex items-center px-2 gap-2 overflow-x-auto">
+            <div
+              className="h-8 bg-zinc-900 border-b border-zinc-800 flex items-center px-2 gap-2 overflow-x-auto"
+              role="tablist"
+              aria-label="Terminal sessions"
+            >
               {openSessions.map((s) => (
                 <div
                   key={s.sessionId}
                   className={`group flex items-center px-3 py-1 text-xs rounded cursor-pointer border border-transparent select-none ${activeSessionId === s.sessionId ? "bg-zinc-800 text-white border-zinc-700" : "bg-zinc-900 text-zinc-400 hover:text-white hover:bg-zinc-800"}`}
                   onClick={() => setActiveSession(s.sessionId)}
                   title={s.cwd}
+                  role="tab"
+                  aria-selected={activeSessionId === s.sessionId}
+                  aria-label={`Terminal: ${s.title}${s.running ? ", running" : ""}`}
+                  tabIndex={0}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      setActiveSession(s.sessionId);
+                    }
+                  }}
                 >
                   <span
                     className={`inline-block w-2 h-2 rounded-full mr-2 ${s.running ? "bg-green-500" : "bg-zinc-600"}`}
+                    aria-hidden="true"
                   ></span>
                   <span className="mr-2 max-w-[150px] truncate">{s.title}</span>
                   <button
@@ -176,8 +193,9 @@ function App() {
                       closeSession(s.sessionId);
                     }}
                     className="opacity-0 group-hover:opacity-100 hover:text-red-400 transition-opacity p-0.5 rounded hover:bg-zinc-700"
+                    aria-label={`Close terminal: ${s.title}`}
                   >
-                    <X size={12} />
+                    <X size={12} aria-hidden="true" />
                   </button>
                 </div>
               ))}
@@ -185,13 +203,19 @@ function App() {
                 onClick={() => createTerminalSession()}
                 className="px-2 py-1 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded transition-colors"
                 title="New Terminal (Ctrl+T)"
+                aria-label="Create new terminal"
               >
-                <Plus size={14} />
+                <Plus size={14} aria-hidden="true" />
               </button>
             </div>
 
             {isPortsOpen && (
-              <div className="absolute inset-0 z-40 bg-black/60 backdrop-blur-sm flex items-center justify-center p-6">
+              <div
+                className="absolute inset-0 z-40 bg-black/60 backdrop-blur-sm flex items-center justify-center p-6"
+                role="dialog"
+                aria-modal="true"
+                aria-label="Ports monitor"
+              >
                 <div className="w-full max-w-3xl h-[70vh] bg-zinc-950 border border-zinc-800 rounded-lg shadow-2xl p-4 flex flex-col">
                   <div className="flex items-center justify-between mb-3">
                     <div className="text-sm font-semibold text-zinc-200">
@@ -200,6 +224,7 @@ function App() {
                     <button
                       onClick={() => setIsPortsOpen(false)}
                       className="px-3 py-1.5 text-xs rounded bg-zinc-800 hover:bg-zinc-700 transition-colors"
+                      aria-label="Close ports monitor"
                     >
                       Закрыть
                     </button>
@@ -237,14 +262,23 @@ function App() {
             })}
 
             {!activeSession && (
-              <div className="absolute inset-0 flex items-center justify-center text-zinc-500 flex-col gap-2">
+              <div
+                className="absolute inset-0 flex items-center justify-center text-zinc-500 flex-col gap-2"
+                role="status"
+                aria-live="polite"
+              >
                 <div className="w-16 h-16 rounded-2xl bg-zinc-900 border border-zinc-800 flex items-center justify-center mb-2">
-                  <Play size={32} className="text-zinc-700" />
+                  <Play
+                    size={32}
+                    className="text-zinc-700"
+                    aria-hidden="true"
+                  />
                 </div>
                 <p>Нет активных терминалов</p>
                 <button
                   onClick={() => createTerminalSession()}
                   className="mt-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-500 transition-colors text-sm"
+                  aria-label="Create new terminal"
                 >
                   Создать терминал
                 </button>
