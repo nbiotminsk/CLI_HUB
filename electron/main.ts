@@ -762,19 +762,28 @@ ipcMain.handle(
       ...process.env,
       ...(resolvedPath ? { PATH: resolvedPath } : {}),
     };
-    // Validate and sanitize cwd - use home dir as fallback if invalid
-    let workingDir = cwd || os.homedir();
+    // Validate and sanitize cwd - use home dir as fallback
+    const homeDir = os.homedir();
+    let workingDir = cwd || homeDir;
+
     try {
       const normalized = path.normalize(workingDir);
-      // Allow relative paths starting with workspace paths from known workspaces
-      // For security, restrict to existing directories
-      if (!normalized.startsWith("/") && !normalized.startsWith("\\")) {
-        // Relative path - keep it but it will be resolved by pty
-      } else if (!fs.existsSync(normalized)) {
-        workingDir = os.homedir();
+
+      // Only validate absolute paths - relative paths are resolved by pty
+      if (normalized.startsWith("/") || normalized.startsWith("\\")) {
+        let exists = false;
+        try {
+          exists = fs.existsSync(normalized);
+        } catch {
+          // Filesystem access error - treat as non-existent
+        }
+        if (!exists) {
+          workingDir = homeDir;
+        }
       }
     } catch {
-      workingDir = os.homedir();
+      // Any path resolution error - fall back to home directory
+      workingDir = homeDir;
     }
 
     const ptyProcess = pty.spawn(shell, args, {
