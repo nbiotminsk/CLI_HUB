@@ -2,7 +2,8 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Plus, Play, Square, Terminal as TerminalIcon } from 'lucide-react';
 import { useWorkspaceStore } from '../store/useWorkspaceStore';
 import type { WorkspaceCommand, CommandTemplate } from '../types';
-import { TemplatesModal } from './TemplatesModal';
+import ReactLazy from 'react';
+const TemplatesModalLazy = ReactLazy.lazy(() => import('./TemplatesModal').then(m => ({ default: m.TemplatesModal })));
 
 export const Sidebar: React.FC = () => {
   const { workspaces, commandsByWs, scriptsByWs, templates, openSessions, setActiveSession, addWorkspaceFromPicker, openCommand, stopSession, loadTemplates, loadPackageScripts } = useWorkspaceStore();
@@ -202,7 +203,8 @@ export const Sidebar: React.FC = () => {
         </div>
       )}
       {templatesOpenForWs && (
-        <TemplatesModal
+        <ReactLazy.Suspense fallback={<div className="p-2 text-xs text-zinc-400">Загрузка…</div>}>
+        <TemplatesModalLazy
           workspaceId={templatesOpenForWs}
           isOpen={!!templatesOpenForWs}
           onClose={() => setTemplatesOpenForWs(null)}
@@ -212,6 +214,7 @@ export const Sidebar: React.FC = () => {
             setTemplatesOpenForWs(null);
           }}
         />
+        </ReactLazy.Suspense>
       )}
       
       <div className="p-4 border-t border-zinc-800">

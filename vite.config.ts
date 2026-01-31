@@ -8,6 +8,16 @@ export default defineConfig({
   base: './',
   build: {
     sourcemap: 'hidden',
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          react: ['react', 'react-dom'],
+          ui: ['lucide-react', 'clsx', 'tailwind-merge'],
+          state: ['zustand'],
+          xterm: ['xterm', 'xterm-addon-fit'],
+        }
+      }
+    }
   },
   plugins: [
     react({

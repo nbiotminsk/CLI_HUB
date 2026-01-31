@@ -226,6 +226,10 @@ function createWindow() {
     return { action: 'allow' };
   });
 
+  mainWindow.on('closed', () => {
+    mainWindow = null;
+  });
+
   if (process.env.NODE_ENV === 'development') {
     mainWindow.loadURL('http://localhost:5173');
     mainWindow.webContents.openDevTools();
@@ -582,16 +586,22 @@ ipcMain.handle('start-process', (event, projectId: string, commandStr: string, c
   shellOnlyByProject[projectId] = args.length === 0;
 
   ptyProcess.onData((data) => {
-    if (mainWindow && !mainWindow.isDestroyed()) {
-      mainWindow.webContents.send('terminal-data', projectId, data);
-    }
+    if (isShuttingDown) return;
+    try {
+      const win = mainWindow;
+      if (!win || win.isDestroyed()) return;
+      win.webContents.send('terminal-data', projectId, data);
+    } catch {}
   });
 
   ptyProcess.onExit(({ exitCode }) => {
     delete ptyProcesses[projectId];
-    if (mainWindow && !mainWindow.isDestroyed()) {
-      mainWindow.webContents.send('process-exit', projectId, exitCode);
-    }
+    if (isShuttingDown) return;
+    try {
+      const win = mainWindow;
+      if (!win || win.isDestroyed()) return;
+      win.webContents.send('process-exit', projectId, exitCode);
+    } catch {}
   });
 
   return { projectId, pid: ptyProcess.pid, status: 'started' };

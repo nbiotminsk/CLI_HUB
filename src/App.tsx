@@ -1,7 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React, { Suspense, useEffect, useState } from 'react';
 import { Sidebar } from './components/Sidebar';
-import { TerminalView } from './components/TerminalView';
-import { PortsMonitor } from './components/PortsMonitor';
+const TerminalViewLazy = React.lazy(() => import('./components/TerminalView').then(m => ({ default: m.TerminalView })));
+const PortsMonitorLazy = React.lazy(() => import('./components/PortsMonitor').then(m => ({ default: m.PortsMonitor })));
 import { useWorkspaceStore } from './store/useWorkspaceStore';
 import { Play, Square, Zap, Plus, X } from 'lucide-react';
 import { electronAPI } from './lib/electron';
@@ -176,7 +176,9 @@ function App() {
                   </button>
                 </div>
                 <div className="flex-1 min-h-0">
-                  <PortsMonitor />
+                  <Suspense fallback={<div className="text-xs text-zinc-400">Загрузка…</div>}>
+                    <PortsMonitorLazy />
+                  </Suspense>
                 </div>
               </div>
             </div>
@@ -187,7 +189,9 @@ function App() {
             return (
               <div key={session.sessionId} className={`absolute inset-0 ${isActive ? 'z-10' : 'z-0 invisible'}`}>
                 <div className="relative w-full h-full">
-                  <TerminalView projectId={session.sessionId} isActive={isActive} />
+                  <Suspense fallback={<div />}>
+                    <TerminalViewLazy projectId={session.sessionId} isActive={isActive} />
+                  </Suspense>
                 </div>
               </div>
             );
