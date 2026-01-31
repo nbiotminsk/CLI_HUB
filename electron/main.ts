@@ -7,6 +7,11 @@ import os from "os";
 import fs from "fs/promises";
 import { execFile } from "child_process";
 import { promisify } from "util";
+import {
+  SIGINT_TIMEOUT_MS,
+  SIGTERM_TIMEOUT_MS,
+  SIGKILL_TIMEOUT_MS,
+} from "../src/constants";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -164,25 +169,25 @@ async function terminatePty(
         // Write may fail if process already exited
       }
       if (shellOnly) return;
-      await sleep(1500);
+      await sleep(SIGINT_TIMEOUT_MS);
       if (!isPidAlive(pid)) return;
       await killProcessTree(pid, "SIGINT");
-      await sleep(1500);
+      await sleep(SIGINT_TIMEOUT_MS);
       if (!isPidAlive(pid)) return;
       await killProcessTree(pid, "SIGTERM");
-      await sleep(2000);
+      await sleep(SIGTERM_TIMEOUT_MS);
       if (!isPidAlive(pid)) return;
       await killProcessTree(pid, "SIGKILL");
-      await sleep(500);
+      await sleep(SIGKILL_TIMEOUT_MS);
       return;
     }
 
     await killProcessTree(pid, "SIGTERM");
-    await sleep(2000);
+    await sleep(SIGTERM_TIMEOUT_MS);
     if (!isPidAlive(pid)) return;
 
     await killProcessTree(pid, "SIGKILL");
-    await sleep(500);
+    await sleep(SIGKILL_TIMEOUT_MS);
   })().finally(() => {
     try {
       ptyProcess.kill();

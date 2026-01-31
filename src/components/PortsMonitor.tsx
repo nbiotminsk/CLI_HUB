@@ -1,9 +1,8 @@
 import React, { useEffect, useState } from "react";
 import type { PortInfo } from "../types";
+import { POLLING_INTERVAL_MS } from "../constants";
 
 type FreeResult = { port: number; pid?: number; status: string };
-
-const POLLING_INTERVAL_MS = 3000;
 
 interface PortsMonitorProps {
   isOpen?: boolean;
