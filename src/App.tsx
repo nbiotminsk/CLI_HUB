@@ -1,5 +1,6 @@
 import React, { Suspense, useEffect, useState } from "react";
 import { Sidebar } from "./components/Sidebar";
+import { ErrorBoundary } from "./components/ErrorBoundary";
 const TerminalViewLazy = React.lazy(() =>
   import("./components/TerminalView").then((m) => ({
     default: m.TerminalView,
@@ -102,154 +103,156 @@ function App() {
 
   return (
     <div className="flex h-screen bg-black text-white overflow-hidden font-sans">
-      <Sidebar />
+      <ErrorBoundary>
+        <Sidebar />
 
-      <div className="flex-1 flex flex-col min-w-0 bg-[#1e1e1e]">
-        {/* Header */}
-        <div className="h-12 bg-[#1e1e1e] border-b border-black flex items-center px-4 select-none justify-between">
-          {activeSession ? (
-            <div className="flex items-center gap-2 overflow-hidden">
-              <span className="text-sm font-semibold text-zinc-200 truncate">
-                {activeSession.title}
-              </span>
-              <span className="text-xs text-zinc-500 truncate font-mono bg-zinc-800 px-2 py-0.5 rounded">
-                {activeSession.cwd}
-              </span>
+        <div className="flex-1 flex flex-col min-w-0 bg-[#1e1e1e]">
+          {/* Header */}
+          <div className="h-12 bg-[#1e1e1e] border-b border-black flex items-center px-4 select-none justify-between">
+            {activeSession ? (
+              <div className="flex items-center gap-2 overflow-hidden">
+                <span className="text-sm font-semibold text-zinc-200 truncate">
+                  {activeSession.title}
+                </span>
+                <span className="text-xs text-zinc-500 truncate font-mono bg-zinc-800 px-2 py-0.5 rounded">
+                  {activeSession.cwd}
+                </span>
+              </div>
+            ) : (
+              <span className="text-sm text-zinc-500">No project selected</span>
+            )}
+
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setIsPortsOpen(true)}
+                className="px-3 py-1.5 text-xs rounded bg-zinc-800 hover:bg-zinc-700 transition-colors"
+              >
+                Ports
+              </button>
+
+              {activeSession && (
+                <>
+                  <button
+                    onClick={() => interruptSession(activeSession.sessionId)}
+                    disabled={!activeSession.running}
+                    className="flex items-center gap-2 px-3 py-1.5 text-xs rounded bg-zinc-800 hover:bg-zinc-700 disabled:opacity-40 disabled:hover:bg-zinc-800 transition-colors"
+                    title="Ctrl+C"
+                  >
+                    <Zap size={14} />
+                    Ctrl+C
+                  </button>
+                  <button
+                    onClick={() => stopSession(activeSession.sessionId)}
+                    disabled={!activeSession.running}
+                    className="flex items-center gap-2 px-3 py-1.5 text-xs rounded bg-zinc-800 hover:bg-zinc-700 disabled:opacity-40 disabled:hover:bg-zinc-800 transition-colors"
+                    title="Kill"
+                  >
+                    <Square size={14} />
+                    Stop
+                  </button>
+                </>
+              )}
             </div>
-          ) : (
-            <span className="text-sm text-zinc-500">No project selected</span>
-          )}
+          </div>
 
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setIsPortsOpen(true)}
-              className="px-3 py-1.5 text-xs rounded bg-zinc-800 hover:bg-zinc-700 transition-colors"
-            >
-              Ports
-            </button>
+          {/* Main Content */}
+          <div className="flex-1 relative bg-black">
+            {/* Tabs */}
+            <div className="h-8 bg-zinc-900 border-b border-zinc-800 flex items-center px-2 gap-2 overflow-x-auto">
+              {openSessions.map((s) => (
+                <div
+                  key={s.sessionId}
+                  className={`group flex items-center px-3 py-1 text-xs rounded cursor-pointer border border-transparent select-none ${activeSessionId === s.sessionId ? "bg-zinc-800 text-white border-zinc-700" : "bg-zinc-900 text-zinc-400 hover:text-white hover:bg-zinc-800"}`}
+                  onClick={() => setActiveSession(s.sessionId)}
+                  title={s.cwd}
+                >
+                  <span
+                    className={`inline-block w-2 h-2 rounded-full mr-2 ${s.running ? "bg-green-500" : "bg-zinc-600"}`}
+                  ></span>
+                  <span className="mr-2 max-w-[150px] truncate">{s.title}</span>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      closeSession(s.sessionId);
+                    }}
+                    className="opacity-0 group-hover:opacity-100 hover:text-red-400 transition-opacity p-0.5 rounded hover:bg-zinc-700"
+                  >
+                    <X size={12} />
+                  </button>
+                </div>
+              ))}
+              <button
+                onClick={() => createTerminalSession()}
+                className="px-2 py-1 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded transition-colors"
+                title="New Terminal (Ctrl+T)"
+              >
+                <Plus size={14} />
+              </button>
+            </div>
 
-            {activeSession && (
-              <>
-                <button
-                  onClick={() => interruptSession(activeSession.sessionId)}
-                  disabled={!activeSession.running}
-                  className="flex items-center gap-2 px-3 py-1.5 text-xs rounded bg-zinc-800 hover:bg-zinc-700 disabled:opacity-40 disabled:hover:bg-zinc-800 transition-colors"
-                  title="Ctrl+C"
+            {isPortsOpen && (
+              <div className="absolute inset-0 z-40 bg-black/60 backdrop-blur-sm flex items-center justify-center p-6">
+                <div className="w-full max-w-3xl h-[70vh] bg-zinc-950 border border-zinc-800 rounded-lg shadow-2xl p-4 flex flex-col">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="text-sm font-semibold text-zinc-200">
+                      Монитор портов
+                    </div>
+                    <button
+                      onClick={() => setIsPortsOpen(false)}
+                      className="px-3 py-1.5 text-xs rounded bg-zinc-800 hover:bg-zinc-700 transition-colors"
+                    >
+                      Закрыть
+                    </button>
+                  </div>
+                  <div className="flex-1 min-h-0">
+                    <Suspense
+                      fallback={
+                        <div className="text-xs text-zinc-400">Загрузка…</div>
+                      }
+                    >
+                      <PortsMonitorLazy isOpen={isPortsOpen} />
+                    </Suspense>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {openSessions.map((session) => {
+              const isActive = activeSessionId === session.sessionId;
+              return (
+                <div
+                  key={session.sessionId}
+                  className={`absolute inset-0 ${isActive ? "z-10" : "z-0 invisible"}`}
                 >
-                  <Zap size={14} />
-                  Ctrl+C
-                </button>
+                  <div className="relative w-full h-full">
+                    <Suspense fallback={<div />}>
+                      <TerminalViewLazy
+                        projectId={session.sessionId}
+                        isActive={isActive}
+                      />
+                    </Suspense>
+                  </div>
+                </div>
+              );
+            })}
+
+            {!activeSession && (
+              <div className="absolute inset-0 flex items-center justify-center text-zinc-500 flex-col gap-2">
+                <div className="w-16 h-16 rounded-2xl bg-zinc-900 border border-zinc-800 flex items-center justify-center mb-2">
+                  <Play size={32} className="text-zinc-700" />
+                </div>
+                <p>Нет активных терминалов</p>
                 <button
-                  onClick={() => stopSession(activeSession.sessionId)}
-                  disabled={!activeSession.running}
-                  className="flex items-center gap-2 px-3 py-1.5 text-xs rounded bg-zinc-800 hover:bg-zinc-700 disabled:opacity-40 disabled:hover:bg-zinc-800 transition-colors"
-                  title="Kill"
+                  onClick={() => createTerminalSession()}
+                  className="mt-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-500 transition-colors text-sm"
                 >
-                  <Square size={14} />
-                  Stop
+                  Создать терминал
                 </button>
-              </>
+              </div>
             )}
           </div>
         </div>
-
-        {/* Main Content */}
-        <div className="flex-1 relative bg-black">
-          {/* Tabs */}
-          <div className="h-8 bg-zinc-900 border-b border-zinc-800 flex items-center px-2 gap-2 overflow-x-auto">
-            {openSessions.map((s) => (
-              <div
-                key={s.sessionId}
-                className={`group flex items-center px-3 py-1 text-xs rounded cursor-pointer border border-transparent select-none ${activeSessionId === s.sessionId ? "bg-zinc-800 text-white border-zinc-700" : "bg-zinc-900 text-zinc-400 hover:text-white hover:bg-zinc-800"}`}
-                onClick={() => setActiveSession(s.sessionId)}
-                title={s.cwd}
-              >
-                <span
-                  className={`inline-block w-2 h-2 rounded-full mr-2 ${s.running ? "bg-green-500" : "bg-zinc-600"}`}
-                ></span>
-                <span className="mr-2 max-w-[150px] truncate">{s.title}</span>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    closeSession(s.sessionId);
-                  }}
-                  className="opacity-0 group-hover:opacity-100 hover:text-red-400 transition-opacity p-0.5 rounded hover:bg-zinc-700"
-                >
-                  <X size={12} />
-                </button>
-              </div>
-            ))}
-            <button
-              onClick={() => createTerminalSession()}
-              className="px-2 py-1 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded transition-colors"
-              title="New Terminal (Ctrl+T)"
-            >
-              <Plus size={14} />
-            </button>
-          </div>
-
-          {isPortsOpen && (
-            <div className="absolute inset-0 z-40 bg-black/60 backdrop-blur-sm flex items-center justify-center p-6">
-              <div className="w-full max-w-3xl h-[70vh] bg-zinc-950 border border-zinc-800 rounded-lg shadow-2xl p-4 flex flex-col">
-                <div className="flex items-center justify-between mb-3">
-                  <div className="text-sm font-semibold text-zinc-200">
-                    Монитор портов
-                  </div>
-                  <button
-                    onClick={() => setIsPortsOpen(false)}
-                    className="px-3 py-1.5 text-xs rounded bg-zinc-800 hover:bg-zinc-700 transition-colors"
-                  >
-                    Закрыть
-                  </button>
-                </div>
-                <div className="flex-1 min-h-0">
-                  <Suspense
-                    fallback={
-                      <div className="text-xs text-zinc-400">Загрузка…</div>
-                    }
-                  >
-                    <PortsMonitorLazy isOpen={isPortsOpen} />
-                  </Suspense>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {openSessions.map((session) => {
-            const isActive = activeSessionId === session.sessionId;
-            return (
-              <div
-                key={session.sessionId}
-                className={`absolute inset-0 ${isActive ? "z-10" : "z-0 invisible"}`}
-              >
-                <div className="relative w-full h-full">
-                  <Suspense fallback={<div />}>
-                    <TerminalViewLazy
-                      projectId={session.sessionId}
-                      isActive={isActive}
-                    />
-                  </Suspense>
-                </div>
-              </div>
-            );
-          })}
-
-          {!activeSession && (
-            <div className="absolute inset-0 flex items-center justify-center text-zinc-500 flex-col gap-2">
-              <div className="w-16 h-16 rounded-2xl bg-zinc-900 border border-zinc-800 flex items-center justify-center mb-2">
-                <Play size={32} className="text-zinc-700" />
-              </div>
-              <p>Нет активных терминалов</p>
-              <button
-                onClick={() => createTerminalSession()}
-                className="mt-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-500 transition-colors text-sm"
-              >
-                Создать терминал
-              </button>
-            </div>
-          )}
-        </div>
-      </div>
+      </ErrorBoundary>
     </div>
   );
 }
