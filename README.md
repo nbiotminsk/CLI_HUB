@@ -1,39 +1,97 @@
-# CLI Hub
+# 🚀 CLI Hub
 
-![CLI Hub Screenshot](public/screenshot.png)
+<p align="center">
+  <img src="public/screenshot.png" alt="CLI Hub Preview" width="600px" style="border-radius: 10px; box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);">
+</p>
 
-## English
+<p align="center">
+  <b>Modern Command-Line Workflow Manager for Developers</b>
+</p>
 
-**CLI Hub** is a powerful desktop application for developers designed to organize and manage command-line workflows. It allows you to group terminal commands into workspaces, manage active ports, and run multiple isolated terminal sessions in a convenient interface.
-
-### Key Features
-- **Workspaces & Commands**: Organize your projects by folders. Create named commands (e.g., `npm start`, `docker-compose up`) for each workspace.
-- **Isolated Terminal Tabs**: Run each command in its own isolated PTY session with tabbed navigation.
-- **Port Monitor**: Built-in tool to view active ports and processes. Includes a "Free Port" button to forcefully kill processes occupying specific ports.
-- **Reliable Process Management**: Graceful shutdown handling (SIGINT/SIGTERM) ensures no orphaned processes or zombie ports remain after closing the app.
-- **Auto-Recovery**: Automatically restores your workspace configuration and running sessions after a restart.
-
-### Installation & Development
-1. Clone the repository.
-2. Install dependencies: `npm install`.
-3. Start in development mode: `npm run dev:all`.
-4. Build for production: `npm run dist`.
+<p align="center">
+  <img src="https://img.shields.io/badge/Electron-47848F?style=for-the-badge&logo=electron&logoColor=white" alt="Electron">
+  <img src="https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB" alt="React">
+  <img src="https://img.shields.io/badge/TypeScript-007ACC?style=for-the-badge&logo=typescript&logoColor=white" alt="TypeScript">
+  <img src="https://img.shields.io/badge/Vite-646CFF?style=for-the-badge&logo=vite&logoColor=white" alt="Vite">
+  <img src="https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white" alt="Tailwind">
+</p>
 
 ---
 
-## Русский
+## 🌐 English
 
-**CLI Hub** — это мощное настольное приложение для разработчиков, предназначенное для организации и управления процессами командной строки. Оно позволяет группировать терминальные команды по рабочим областям (workspaces), управлять активными портами и запускать несколько изолированных терминальных сессий в удобном интерфейсе.
+**CLI Hub** is a powerful desktop application designed to organize and manage complex command-line workflows. Stop juggling dozens of terminal windows and start grouping your commands into clean, manageable workspaces.
 
-### Основные возможности
-- **Рабочие области и команды**: Организуйте проекты по папкам. Создавайте именованные команды (например, `npm start`, `docker-compose up`) для каждой рабочей области.
-- **Изолированные вкладки терминала**: Запускайте каждую команду в собственной изолированной PTY-сессии с переключением по вкладкам.
-- **Монитор портов**: Встроенный инструмент для просмотра активных портов и процессов. Включает кнопку «Освободить» для принудительного завершения процессов, занимающих порты.
-- **Надёжное управление процессами**: Корректная обработка завершения (SIGINT/SIGTERM) гарантирует отсутствие зависших процессов и занятых портов после закрытия приложения.
-- **Автовосстановление**: Автоматически восстанавливает конфигурацию рабочих областей и запущенные сессии после перезапуска.
+### ✨ Key Features
 
-### Установка и разработка
-1. Клонируйте репозиторий.
-2. Установите зависимости: `npm install`.
-3. Запустите в режиме разработки: `npm run dev:all`.
-4. Соберите для продакшена: `npm run dist`.
+-   **📂 Workspace-Based Organization**: Group terminal commands by project or environment. No more searching through history for that one Docker command.
+-   **🖥️ Isolated Terminal Tabs**: Each command runs in its own dedicated, high-performance PTY session (powered by `xterm.js`).
+-   **📊 Smart Port Monitor**: A built-in real-time view of active ports. See what's running and free up ports with a single click.
+-   **🛡️ Reliable Process Management**: Handles `SIGINT` and `SIGTERM` correctly, ensuring no "zombie" processes are left behind when you close the app.
+-   **🔄 Session Persistence**: Automatically restores your workspaces and running session configurations after a restart.
+-   **🎨 Premium UI/UX**: Built with a modern, dark-themed aesthetic that looks great and feels fast.
+
+### 🛠️ Tech Stack
+
+-   **Frontend**: React + TypeScript + Vite
+-   **Backend**: Electron (Node.js)
+-   **Terminal**: xterm.js + node-pty
+-   **Styling**: Tailwind CSS + Lucide Icons
+-   **State Management**: Zustand
+-   **Storage**: electron-store
+
+### 🚀 Getting Started
+
+1.  **Clone the Repo**:
+    ```bash
+    git clone https://github.com/nbiotminsk/CLI_HUB.git
+    cd CLI_HUB
+    ```
+2.  **Install Dependencies**:
+    ```bash
+    npm install
+    ```
+3.  **Run in Development Mode**:
+    ```bash
+    npm run dev:electron
+    ```
+4.  **Build Production App**:
+    ```bash
+    npm run dist
+    ```
+
+---
+
+## 🇷🇺 Русский
+
+**CLI Hub** — это мощное настольное приложение для разработчиков, предназначенное для наведения порядка в консольных рабочих процессах. Забудьте о десятках открытых окон терминала — группируйте команды в удобные и понятные рабочие области.
+
+### ✨ Основные возможности
+
+-   **📂 Организация через Workspace**: Группируйте команды по проектам. Создавайте именованные пресеты для каждой задачи (например, `frontend:dev`, `docker:up`).
+-   **🖥️ Изолированные вкладки**: Каждая команда запускается в собственной PTY-сессии с использованием `xterm.js`.
+-   **📊 Монитор портов**: Мгновенный обзор занятых портов. Узнайте, какой процесс занимает порт, и освободите его одним нажатием кнопки.
+-   **🛡️ Безопасное завершение**: Приложение корректно завершает все дочерние процессы, предотвращая появление "зомби-процессов" в системе.
+-   **🔄 Сохранение состояния**: Ваши рабочие области и настройки команд автоматически восстанавливаются при перезапуске.
+-   **🎨 Премиальный дизайн**: Современный тёмный интерфейс, спроектированный для комфортной долгой работы.
+
+### 🚀 Быстрый старт
+
+1.  **Установка**:
+    ```bash
+    npm install
+    ```
+2.  **Запуск в режиме разработки**:
+    ```bash
+    npm run dev:electron
+    ```
+3.  **Сборка приложения**:
+    ```bash
+    npm run dist
+    ```
+
+---
+
+<p align="center">
+  Made with ❤️ for developers
+</p>
