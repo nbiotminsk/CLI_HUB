@@ -1,6 +1,10 @@
-import { create } from 'zustand';
-import type { Workspace, WorkspaceCommand, CommandTemplate } from '../types';
-import { electronAPI } from '../lib/electron';
+import { create } from "zustand";
+import type { Workspace, WorkspaceCommand, CommandTemplate } from "../types";
+import { electronAPI } from "../lib/electron";
+
+interface WindowWithPicker extends Window {
+  showDirectoryPicker?: () => Promise<{ name?: string }>;
+}
 
 type Session = {
   sessionId: string;
@@ -28,10 +32,20 @@ interface WorkspaceState {
   loadPackageScripts: (workspaceId: string) => Promise<void>;
   loadTemplates: () => Promise<void>;
   addTemplate: (tpl: CommandTemplate) => Promise<CommandTemplate>;
-  updateTemplate: (id: string, updates: Partial<CommandTemplate>) => Promise<void>;
+  updateTemplate: (
+    id: string,
+    updates: Partial<CommandTemplate>,
+  ) => Promise<void>;
   deleteTemplate: (id: string) => Promise<void>;
-  addCommand: (workspaceId: string, command: WorkspaceCommand) => Promise<WorkspaceCommand>;
-  updateCommand: (workspaceId: string, commandId: string, updates: Partial<WorkspaceCommand>) => Promise<void>;
+  addCommand: (
+    workspaceId: string,
+    command: WorkspaceCommand,
+  ) => Promise<WorkspaceCommand>;
+  updateCommand: (
+    workspaceId: string,
+    commandId: string,
+    updates: Partial<WorkspaceCommand>,
+  ) => Promise<void>;
   deleteCommand: (workspaceId: string, commandId: string) => Promise<void>;
 
   openCommand: (workspaceId: string, commandId: string) => Promise<void>;
@@ -61,7 +75,9 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
   nextSession: () => {
     const st = get();
     if (st.openSessions.length <= 1) return;
-    const idx = st.openSessions.findIndex((s) => s.sessionId === st.activeSessionId);
+    const idx = st.openSessions.findIndex(
+      (s) => s.sessionId === st.activeSessionId,
+    );
     if (idx === -1) return;
     const next = st.openSessions[(idx + 1) % st.openSessions.length];
     set({ activeSessionId: next.sessionId });
@@ -69,32 +85,43 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
   prevSession: () => {
     const st = get();
     if (st.openSessions.length <= 1) return;
-    const idx = st.openSessions.findIndex((s) => s.sessionId === st.activeSessionId);
+    const idx = st.openSessions.findIndex(
+      (s) => s.sessionId === st.activeSessionId,
+    );
     if (idx === -1) return;
-    const prev = st.openSessions[(idx - 1 + st.openSessions.length) % st.openSessions.length];
+    const prev =
+      st.openSessions[
+        (idx - 1 + st.openSessions.length) % st.openSessions.length
+      ];
     set({ activeSessionId: prev.sessionId });
   },
   setWindowFocused: (focused) => set({ isWindowFocused: focused }),
   restartSessionToShell: async (sessionId) => {
     const st = get();
-    const session = st.openSessions.find(s => s.sessionId === sessionId);
+    const session = st.openSessions.find((s) => s.sessionId === sessionId);
     if (!session) return;
-    const cwd = session.cwd || '';
-    await electronAPI.startProcess(sessionId, '', cwd);
+    const cwd = session.cwd || "";
+    await electronAPI.startProcess(sessionId, "", cwd);
     const status = await electronAPI.getProcessStatus(sessionId);
     set((state) => ({
-      openSessions: state.openSessions.map(s => s.sessionId === sessionId ? { ...s, running: status.isRunning, pid: status.pid } : s),
+      openSessions: state.openSessions.map((s) =>
+        s.sessionId === sessionId
+          ? { ...s, running: status.isRunning, pid: status.pid }
+          : s,
+      ),
     }));
   },
 
   loadWorkspaces: async () => {
     const list = await electronAPI.getWorkspaces();
     set({ workspaces: list });
-    // Load commands for each workspace
-    for (const ws of list) {
-      await get().loadCommands(ws.id);
-      await get().loadPackageScripts(ws.id);
-    }
+    // Load commands for each workspace in parallel
+    await Promise.all(
+      list.flatMap((ws) => [
+        get().loadCommands(ws.id),
+        get().loadPackageScripts(ws.id),
+      ]),
+    );
   },
 
   addWorkspaceFromPicker: async () => {
@@ -107,13 +134,13 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
     } else {
       // Browser fallback: try showDirectoryPicker; if not available, prompt
       try {
-        const anyWin = window as any;
-        if (typeof anyWin.showDirectoryPicker === 'function') {
+        const anyWin = window as WindowWithPicker;
+        if (typeof anyWin.showDirectoryPicker === "function") {
           const handle = await anyWin.showDirectoryPicker();
-          name = handle?.name ?? 'Folder';
+          name = handle?.name ?? "Folder";
           pathStr = `fs:${name}`;
         } else {
-          const input = prompt('Введите имя папки для добавления:');
+          const input = prompt("Введите имя папки для добавления:");
           if (input && input.trim()) {
             name = input.trim();
             pathStr = `mock:${name}`;
@@ -144,11 +171,15 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
 
   loadCommands: async (workspaceId) => {
     const commands = await electronAPI.getWorkspaceCommands(workspaceId);
-    set((state) => ({ commandsByWs: { ...state.commandsByWs, [workspaceId]: commands } }));
+    set((state) => ({
+      commandsByWs: { ...state.commandsByWs, [workspaceId]: commands },
+    }));
   },
   loadPackageScripts: async (workspaceId) => {
     const scripts = await electronAPI.getPackageScripts(workspaceId);
-    set((state) => ({ scriptsByWs: { ...state.scriptsByWs, [workspaceId]: scripts } }));
+    set((state) => ({
+      scriptsByWs: { ...state.scriptsByWs, [workspaceId]: scripts },
+    }));
   },
   loadTemplates: async () => {
     const list = await electronAPI.getTemplates();
@@ -161,11 +192,13 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
   },
   updateTemplate: async (id, updates) => {
     const updated = await electronAPI.updateTemplate(id, updates);
-    set((state) => ({ templates: state.templates.map(t => t.id === id ? updated : t) }));
+    set((state) => ({
+      templates: state.templates.map((t) => (t.id === id ? updated : t)),
+    }));
   },
   deleteTemplate: async (id) => {
     await electronAPI.deleteTemplate(id);
-    set((state) => ({ templates: state.templates.filter(t => t.id !== id) }));
+    set((state) => ({ templates: state.templates.filter((t) => t.id !== id) }));
   },
 
   addCommand: async (workspaceId, command) => {
@@ -210,8 +243,8 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
   },
 
   createTerminalSession: async (workspaceId?: string) => {
-    let cwd = '';
-    let title = 'Terminal';
+    let cwd = "";
+    let title = "Terminal";
 
     if (workspaceId) {
       const ws = get().workspaces.find((w) => w.id === workspaceId);
@@ -223,13 +256,13 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
 
     const sessionId = crypto.randomUUID();
     // Start generic shell
-    await electronAPI.startProcess(sessionId, '', cwd);
+    await electronAPI.startProcess(sessionId, "", cwd);
     const status = await electronAPI.getProcessStatus(sessionId);
 
     const session: Session = {
       sessionId,
-      workspaceId: workspaceId || '',
-      commandId: '',
+      workspaceId: workspaceId || "",
+      commandId: "",
       title: title,
       running: status.isRunning,
       pid: status.pid,
@@ -248,8 +281,12 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
     if (!session) return;
     await electronAPI.stopProcess(sessionId);
     set((state) => {
-      const idx = state.openSessions.findIndex((s) => s.sessionId === sessionId);
-      const newSessions = state.openSessions.filter((s) => s.sessionId !== sessionId);
+      const idx = state.openSessions.findIndex(
+        (s) => s.sessionId === sessionId,
+      );
+      const newSessions = state.openSessions.filter(
+        (s) => s.sessionId !== sessionId,
+      );
       let newActive = state.activeSessionId;
       if (state.activeSessionId === sessionId) {
         if (newSessions.length === 0) {
@@ -264,7 +301,9 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
         activeSessionId: newActive,
       };
     });
-    await get().updateCommand(session.workspaceId, session.commandId, { lastRunning: false });
+    await get().updateCommand(session.workspaceId, session.commandId, {
+      lastRunning: false,
+    });
   },
 
   interruptSession: async (sessionId) => {
@@ -274,7 +313,9 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
   stopSession: async (sessionId) => {
     await electronAPI.stopProcess(sessionId);
     set((state) => ({
-      openSessions: state.openSessions.map((s) => s.sessionId === sessionId ? { ...s, running: false } : s),
+      openSessions: state.openSessions.map((s) =>
+        s.sessionId === sessionId ? { ...s, running: false } : s,
+      ),
     }));
   },
 
@@ -289,4 +330,4 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
       }
     }
   },
-})); 
+}));

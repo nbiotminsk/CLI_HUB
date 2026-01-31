@@ -1,102 +1,178 @@
-import type { ElectronAPI, Workspace, WorkspaceCommand, ProcessStatus, PortInfo } from '../types';
+import type {
+  ElectronAPI,
+  Workspace,
+  WorkspaceCommand,
+  ProcessStatus,
+  PortInfo,
+  CommandTemplate,
+} from "../types";
 
-const hasReal = typeof window !== 'undefined' && !!(window as any).electronAPI;
+const hasReal =
+  typeof window !== "undefined" &&
+  !!(window as { electronAPI?: ElectronAPI }).electronAPI;
 
 const mem = {
   workspaces: [] as Workspace[],
   commandsByWs: new Map<string, WorkspaceCommand[]>(),
-  templates: [] as { id: string; name: string; command: string; category?: string; createdAt: string; updatedAt: string }[],
+  templates: [] as {
+    id: string;
+    name: string;
+    command: string;
+    category?: string;
+    createdAt: string;
+    updatedAt: string;
+  }[],
 };
 
 const fallback: ElectronAPI = {
   selectDirectory: async () => null,
   getWorkspaces: async () => [...mem.workspaces],
   addWorkspace: async (workspace: Workspace) => {
-    const existing = mem.workspaces.find(w => w.path === workspace.path) || mem.workspaces.find(w => w.id === workspace.id);
+    const existing =
+      mem.workspaces.find((w) => w.path === workspace.path) ||
+      mem.workspaces.find((w) => w.id === workspace.id);
     if (!existing) {
       mem.workspaces.push(workspace);
     }
     return workspace;
   },
   updateWorkspace: async (id: string, updates: Partial<Workspace>) => {
-    const idx = mem.workspaces.findIndex(w => w.id === id);
+    const idx = mem.workspaces.findIndex((w) => w.id === id);
     if (idx !== -1) {
-      const updated = { ...mem.workspaces[idx], ...updates, updatedAt: new Date().toISOString() } as Workspace;
+      const updated = {
+        ...mem.workspaces[idx],
+        ...updates,
+        updatedAt: new Date().toISOString(),
+      } as Workspace;
       mem.workspaces[idx] = updated;
       return updated;
     }
-    return { id, name: updates.name || '', path: updates.path || '', createdAt: updates.createdAt || '', updatedAt: new Date().toISOString() } as Workspace;
+    return {
+      id,
+      name: updates.name || "",
+      path: updates.path || "",
+      createdAt: updates.createdAt || "",
+      updatedAt: new Date().toISOString(),
+    } as Workspace;
   },
   deleteWorkspace: async (id: string) => {
-    mem.workspaces = mem.workspaces.filter(w => w.id !== id);
+    mem.workspaces = mem.workspaces.filter((w) => w.id !== id);
     mem.commandsByWs.delete(id);
     return id;
   },
-  getWorkspaceCommands: async (workspaceId: string) => {
-    return [...(mem.commandsByWs.get(workspaceId) ?? [])];
+  getWorkspaceCommands: async (_workspaceId: string) => {
+    void _workspaceId;
+    return [...(mem.commandsByWs.get(_workspaceId) ?? [])];
   },
-  addWorkspaceCommand: async (workspaceId: string, command: WorkspaceCommand) => {
+  addWorkspaceCommand: async (
+    workspaceId: string,
+    command: WorkspaceCommand,
+  ) => {
     const list = mem.commandsByWs.get(workspaceId) ?? [];
     mem.commandsByWs.set(workspaceId, [...list, command]);
     return command;
   },
-  updateWorkspaceCommand: async (workspaceId: string, commandId: string, updates: Partial<WorkspaceCommand>) => {
+  updateWorkspaceCommand: async (
+    workspaceId: string,
+    commandId: string,
+    updates: Partial<WorkspaceCommand>,
+  ) => {
     const list = mem.commandsByWs.get(workspaceId) ?? [];
-    const idx = list.findIndex(c => c.id === commandId);
+    const idx = list.findIndex((c) => c.id === commandId);
     if (idx !== -1) {
-      const updated = { ...list[idx], ...updates, updatedAt: new Date().toISOString() } as WorkspaceCommand;
+      const updated = {
+        ...list[idx],
+        ...updates,
+        updatedAt: new Date().toISOString(),
+      } as WorkspaceCommand;
       const next = [...list];
       next[idx] = updated;
       mem.commandsByWs.set(workspaceId, next);
       return updated;
     }
-    const updated: WorkspaceCommand = { id: commandId, name: updates.name || '', command: updates.command || '', createdAt: updates.createdAt || new Date().toISOString(), updatedAt: new Date().toISOString() };
+    const updated: WorkspaceCommand = {
+      id: commandId,
+      name: updates.name || "",
+      command: updates.command || "",
+      createdAt: updates.createdAt || new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
     const next = [...list, updated];
     mem.commandsByWs.set(workspaceId, next);
     return updated;
   },
   deleteWorkspaceCommand: async (workspaceId: string, commandId: string) => {
     const list = mem.commandsByWs.get(workspaceId) ?? [];
-    mem.commandsByWs.set(workspaceId, list.filter(c => c.id !== commandId));
+    mem.commandsByWs.set(
+      workspaceId,
+      list.filter((c) => c.id !== commandId),
+    );
     return commandId;
   },
-  getPackageScripts: async (_workspaceId: string) => ({}),
+  getPackageScripts: async () => ({}),
   getTemplates: async () => [...mem.templates],
   addTemplate: async (tpl) => {
-    const exists = mem.templates.find(t => t.id === tpl.id);
+    const exists = mem.templates.find((t) => t.id === tpl.id);
     if (!exists) mem.templates.push(tpl);
     return tpl;
   },
   updateTemplate: async (id, updates) => {
-    const idx = mem.templates.findIndex(t => t.id === id);
+    const idx = mem.templates.findIndex((t) => t.id === id);
     if (idx !== -1) {
-      const updated = { ...mem.templates[idx], ...updates, updatedAt: new Date().toISOString() };
+      const updated = {
+        ...mem.templates[idx],
+        ...updates,
+        updatedAt: new Date().toISOString(),
+      };
       mem.templates[idx] = updated;
-      return updated as any;
+      return updated as CommandTemplate;
     }
-    const created = { id, name: updates.name || '', command: updates.command || '', category: updates.category, createdAt: updates['createdAt'] || new Date().toISOString(), updatedAt: new Date().toISOString() };
+    const created: CommandTemplate = {
+      id,
+      name: updates.name || "",
+      command: updates.command || "",
+      category: updates.category,
+      createdAt: updates["createdAt"] || new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
     mem.templates.push(created);
-    return created as any;
+    return created;
   },
   deleteTemplate: async (id) => {
-    mem.templates = mem.templates.filter(t => t.id !== id);
+    mem.templates = mem.templates.filter((t) => t.id !== id);
     return id;
   },
   listPorts: async () => [] as PortInfo[],
-  freePort: async (port: number, pid?: number) => ({ port, pid, status: 'noop' }),
-  startProcess: async (id: string, _command: string, _cwd: string) => ({ projectId: id, pid: 0, status: 'started' }),
-  interruptProcess: async (id: string) => ({ projectId: id, status: 'interrupting' }),
-  stopProcess: async (id: string) => ({ projectId: id, status: 'stopping' }),
-  getProcessStatus: async (id: string) => ({ projectId: id, isRunning: false, pid: 0 } as ProcessStatus),
+  freePort: async (port: number, pid?: number) => ({
+    port,
+    pid,
+    status: "noop",
+  }),
+  startProcess: async (id: string) => ({
+    projectId: id,
+    pid: 0,
+    status: "started",
+  }),
+  interruptProcess: async (id: string) => ({
+    projectId: id,
+    status: "interrupting",
+  }),
+  stopProcess: async (id: string) => ({ projectId: id, status: "stopping" }),
+  getProcessStatus: async (id: string) =>
+    ({ projectId: id, isRunning: false, pid: 0 }) as ProcessStatus,
   terminalWrite: async () => {},
   terminalResize: async () => {},
   onTerminalData: (_cb: (projectId: string, data: string) => void) => {
+    void _cb;
     return () => {};
   },
   onProcessExit: (_cb: (projectId: string, exitCode: number) => void) => {
+    void _cb;
     return () => {};
   },
 };
 
-export const electronAPI: ElectronAPI = hasReal ? (window as any).electronAPI : fallback;
+export const electronAPI: ElectronAPI = hasReal
+  ? (window as { electronAPI: ElectronAPI }).electronAPI
+  : fallback;
 export const isElectron = hasReal;

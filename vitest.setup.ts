@@ -1,27 +1,61 @@
-import '@testing-library/jest-dom';
+import "@testing-library/jest-dom";
+import type { ElectronAPI, Workspace, WorkspaceCommand } from "./src/types";
 
-const mockAPI = {
+const mockAPI: ElectronAPI = {
   // Workspaces
   selectDirectory: async () => null,
   getWorkspaces: async () => [],
-  addWorkspace: async (workspace: any) => workspace,
-  updateWorkspace: async (_id: string, workspace: any) => ({ id: _id, ...workspace }),
+  addWorkspace: async (workspace: Workspace) => workspace,
+  updateWorkspace: async (
+    _id: string,
+    workspace: Partial<Workspace> & { id: string },
+  ) => ({ ...workspace, id: _id }),
   deleteWorkspace: async (_id: string) => _id,
 
-  getWorkspaceCommands: async (_workspaceId: string) => [],
-  addWorkspaceCommand: async (_workspaceId: string, command: any) => command,
-  updateWorkspaceCommand: async (_workspaceId: string, _commandId: string, updates: any) => updates,
-  deleteWorkspaceCommand: async (_workspaceId: string, commandId: string) => commandId,
+  getWorkspaceCommands: async (_workspaceId: string) => {
+    void _workspaceId;
+    return [];
+  },
+  addWorkspaceCommand: async (
+    _workspaceId: string,
+    command: WorkspaceCommand,
+  ) => command,
+  updateWorkspaceCommand: async (
+    _workspaceId: string,
+    _commandId: string,
+    updates: Partial<WorkspaceCommand>,
+  ) => updates,
+  deleteWorkspaceCommand: async (_workspaceId: string, commandId: string) =>
+    commandId,
 
   // Ports
   listPorts: async () => [],
-  freePort: async (port: number, pid?: number) => ({ port, pid, status: 'freed' }),
+  freePort: async (port: number, pid?: number) => ({
+    port,
+    pid,
+    status: "freed",
+  }),
 
   // Processes
-  startProcess: async (id: string, _command: string, _cwd: string) => ({ projectId: id, pid: 1234, status: 'started' }),
-  interruptProcess: async (id: string) => ({ projectId: id, status: 'interrupting' }),
-  stopProcess: async (id: string) => ({ projectId: id, status: 'stopping' }),
-  getProcessStatus: async (id: string) => ({ projectId: id, isRunning: true, pid: 1234 }),
+  startProcess: async (id: string, _command: string, _cwd: string) => {
+    void _command;
+    void _cwd;
+    return {
+      projectId: id,
+      pid: 1234,
+      status: "started",
+    };
+  },
+  interruptProcess: async (id: string) => ({
+    projectId: id,
+    status: "interrupting",
+  }),
+  stopProcess: async (id: string) => ({ projectId: id, status: "stopping" }),
+  getProcessStatus: async (id: string) => ({
+    projectId: id,
+    isRunning: true,
+    pid: 1234,
+  }),
 
   // Terminal
   terminalWrite: async () => {},
@@ -29,22 +63,28 @@ const mockAPI = {
 
   // Events
   onTerminalData: (callback: (projectId: string, data: string) => void) => {
-    // Return cleanup
+    void callback;
     return () => {};
   },
   onProcessExit: (callback: (projectId: string, exitCode: number) => void) => {
-    // Return cleanup
+    void callback;
     return () => {};
   },
-} as any;
 
-Object.defineProperty(window, 'electronAPI', {
+  getTemplates: async () => [],
+  addTemplate: async (tpl: WorkspaceCommand) => tpl,
+  updateTemplate: async (_id: string, updates: Partial<WorkspaceCommand>) =>
+    updates as WorkspaceCommand,
+  deleteTemplate: async (id: string) => id,
+} as unknown as ElectronAPI;
+
+Object.defineProperty(window, "electronAPI", {
   value: mockAPI,
   writable: true,
 });
 
 // jsdom does not implement matchMedia; xterm expects it
-Object.defineProperty(window, 'matchMedia', {
+Object.defineProperty(window, "matchMedia", {
   writable: true,
   value: (query: string) => ({
     matches: false,
