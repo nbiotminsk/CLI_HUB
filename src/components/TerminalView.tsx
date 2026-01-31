@@ -84,18 +84,21 @@ export const TerminalView: React.FC<TerminalViewProps> = ({
 
     window.addEventListener("resize", handleResize);
 
-    // Initial resize
-    setTimeout(() => {
-      try {
-        handleResize();
-      } catch {
-        // Resize may fail if element is not visible
-      }
-    }, 100);
+    // Use ResizeObserver for reliable resize detection
+    const resizeObserver = new ResizeObserver(() => {
+      handleResize();
+    });
+    resizeObserver.observe(terminalRef.current);
+
+    // Initial resize after a short delay to ensure DOM is ready
+    requestAnimationFrame(() => {
+      handleResize();
+    });
 
     return () => {
       cleanup();
       window.removeEventListener("resize", handleResize);
+      resizeObserver.disconnect();
       term.dispose();
       xtermRef.current = null;
       readyRef.current = false;
@@ -106,7 +109,7 @@ export const TerminalView: React.FC<TerminalViewProps> = ({
   useEffect(() => {
     if (!isElectron) return;
     if (isActive && fitAddonRef.current && readyRef.current) {
-      setTimeout(() => {
+      requestAnimationFrame(() => {
         const el = terminalRef.current;
         if (!el) return;
         const rect = el.getBoundingClientRect();
@@ -126,7 +129,7 @@ export const TerminalView: React.FC<TerminalViewProps> = ({
         } catch {
           // Resize may fail if element is not visible
         }
-      }, 50);
+      });
     }
   }, [isActive, projectId]);
 
