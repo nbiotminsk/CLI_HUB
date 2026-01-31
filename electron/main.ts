@@ -5,6 +5,7 @@ import Store from "electron-store";
 import pty from "node-pty";
 import os from "os";
 import fs from "fs/promises";
+import fsSync from "fs";
 import { execFile } from "child_process";
 import { promisify } from "util";
 import {
@@ -773,7 +774,7 @@ ipcMain.handle(
       if (normalized.startsWith("/") || normalized.startsWith("\\")) {
         let exists = false;
         try {
-          exists = fs.existsSync(normalized);
+          exists = fsSync.existsSync(normalized);
         } catch {
           // Filesystem access error - treat as non-existent
         }
