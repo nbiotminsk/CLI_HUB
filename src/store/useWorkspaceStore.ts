@@ -416,7 +416,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
     const session = st.openSessions.find((s) => s.sessionId === sessionId);
     set((state) => ({
       openSessions: state.openSessions.map((s) =>
-        s.sessionId === sessionId ? { ...s, running: false } : s,
+        s.sessionId === sessionId ? { ...s, running: false, keepOpen: false } : s,
       ),
     }));
     if (session?.workspaceId && session.commandId) {

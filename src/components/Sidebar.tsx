@@ -476,18 +476,52 @@ export const Sidebar: React.FC = () => {
                         )}
                         {scriptEntries.map(([name, cmd]) => {
                           const label = toNpmScriptCommand(name);
+                          const runningSession = openSessions.find(
+                            (s) =>
+                              s.workspaceId === ws.id && s.title === label,
+                          );
+                          const isRunning = !!runningSession?.running;
                           return (
-                            <button
+                            <div
                               key={name}
-                              onClick={() => handleRunScript(ws.id, name)}
-                              className="w-full text-left px-2 py-1 rounded bg-zinc-900 hover:bg-zinc-800 text-white text-xs"
+                              className="flex items-center justify-between gap-2 px-2 py-1 rounded bg-zinc-900 hover:bg-zinc-800 text-white text-xs"
                               title={cmd}
                             >
-                              <div className="font-medium">{label}</div>
-                              <div className="font-mono text-zinc-400 truncate">
-                                {cmd}
-                              </div>
-                            </button>
+                              <button
+                                onClick={() => {
+                                  if (runningSession) {
+                                    setActiveSession(runningSession.sessionId);
+                                  } else {
+                                    handleRunScript(ws.id, name);
+                                  }
+                                }}
+                                className="flex-1 min-w-0 overflow-hidden text-left"
+                              >
+                                <div className="flex items-center gap-2">
+                                  <span
+                                    className={`inline-block w-2 h-2 rounded-full ${isRunning ? "bg-green-500" : "bg-zinc-600"}`}
+                                    aria-hidden="true"
+                                  />
+                                  <span className="font-medium truncate">
+                                    {label}
+                                  </span>
+                                </div>
+                                <div className="font-mono text-zinc-400 truncate">
+                                  {cmd}
+                                </div>
+                              </button>
+                              {isRunning && runningSession && (
+                                <button
+                                  onClick={() =>
+                                    stopSession(runningSession.sessionId)
+                                  }
+                                  className="flex-shrink-0 p-1 rounded text-red-400 hover:text-red-300 hover:bg-red-500/10"
+                                  title="Stop"
+                                >
+                                  <Square size={12} />
+                                </button>
+                              )}
+                            </div>
                           );
                         })}
                       </>
@@ -624,59 +658,119 @@ export const Sidebar: React.FC = () => {
                           </div>
                         )}
                         {toolCommands.map((tool) => (
-                          <div
-                            key={tool.id}
-                            className="group flex items-center justify-between gap-2 px-2 py-1 rounded bg-zinc-900 hover:bg-zinc-800 text-white text-xs"
-                            title={tool.command}
-                          >
-                            <button
-                              onClick={() => handleRunTool(ws.id, tool)}
-                              className="flex-1 min-w-0 overflow-hidden text-left"
+                          (() => {
+                            const runningSession = openSessions.find(
+                              (s) =>
+                                s.workspaceId === ws.id &&
+                                s.commandId === tool.id,
+                            );
+                            const isRunning = !!runningSession?.running;
+                            return (
+                              <div
+                                key={tool.id}
+                                className="group flex items-center justify-between gap-2 px-2 py-1 rounded bg-zinc-900 hover:bg-zinc-800 text-white text-xs"
+                                title={tool.command}
+                              >
+                                <button
+                                  onClick={() => handleRunTool(ws.id, tool)}
+                                  className="flex-1 min-w-0 overflow-hidden text-left"
+                                >
+                                  <div className="flex items-center gap-2">
+                                    <span
+                                      className={`inline-block w-2 h-2 rounded-full ${isRunning ? "bg-green-500" : "bg-zinc-600"}`}
+                                      aria-hidden="true"
+                                    />
+                                    <span className="font-medium truncate">
+                                      {tool.name}
+                                    </span>
+                                  </div>
+                                  <div className="font-mono text-zinc-400 truncate">
+                                    {tool.command}
+                                  </div>
+                                </button>
+                                <div className="flex flex-shrink-0 items-center gap-1">
+                                  {isRunning && runningSession && (
+                                    <button
+                                      onClick={() =>
+                                        stopSession(runningSession.sessionId)
+                                      }
+                                      className="p-1 rounded text-red-400 hover:text-red-300 hover:bg-red-500/10"
+                                      title="Stop"
+                                    >
+                                      <Square size={12} />
+                                    </button>
+                                  )}
+                                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        beginEditTool(ws.id, tool);
+                                      }}
+                                      className="p-1 rounded text-zinc-400 hover:text-white hover:bg-zinc-700"
+                                      title="Edit tool"
+                                    >
+                                      <Pencil size={12} />
+                                    </button>
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleDeleteTool(ws.id, tool.id);
+                                      }}
+                                      className="p-1 rounded text-red-400 hover:text-red-300 hover:bg-red-500/10"
+                                      title="Delete tool"
+                                    >
+                                      <Trash2 size={12} />
+                                    </button>
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })()
+                        ))}
+                        {PROJECT_TOOLS.map((action) => {
+                          const runningSession = openSessions.find(
+                            (s) =>
+                              s.workspaceId === ws.id &&
+                              s.title === action.label,
+                          );
+                          const isRunning = !!runningSession?.running;
+                          return (
+                            <div
+                              key={action.id}
+                              className="flex items-center justify-between gap-2 px-2 py-1 rounded bg-zinc-900 hover:bg-zinc-800 text-white text-xs"
+                              title={action.command}
                             >
-                              <div className="font-medium truncate">
-                                {tool.name}
-                              </div>
-                              <div className="font-mono text-zinc-400 truncate">
-                                {tool.command}
-                              </div>
-                            </button>
-                            <div className="flex flex-shrink-0 items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                               <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  beginEditTool(ws.id, tool);
-                                }}
-                                className="p-1 rounded text-zinc-400 hover:text-white hover:bg-zinc-700"
-                                title="Edit tool"
+                                onClick={() => handleQuickAction(ws.id, action)}
+                                className="flex-1 min-w-0 overflow-hidden text-left"
                               >
-                                <Pencil size={12} />
+                                <div className="flex items-center gap-2">
+                                  <span
+                                    className={`inline-block w-2 h-2 rounded-full ${isRunning ? "bg-green-500" : "bg-zinc-600"}`}
+                                    aria-hidden="true"
+                                  />
+                                  <span className="font-medium truncate">
+                                    {action.label}
+                                  </span>
+                                </div>
+                                <div className="font-mono text-zinc-400 truncate">
+                                  {action.command}
+                                </div>
                               </button>
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleDeleteTool(ws.id, tool.id);
-                                }}
-                                className="p-1 rounded text-red-400 hover:text-red-300 hover:bg-red-500/10"
-                                title="Delete tool"
-                              >
-                                <Trash2 size={12} />
-                              </button>
+                              {isRunning && runningSession && (
+                                <button
+                                  onClick={() =>
+                                    stopSession(runningSession.sessionId)
+                                  }
+                                  className="flex-shrink-0 p-1 rounded text-red-400 hover:text-red-300 hover:bg-red-500/10"
+                                  title="Stop"
+                                >
+                                  <Square size={12} />
+                                </button>
+                              )}
                             </div>
-                          </div>
-                        ))}
-                        {PROJECT_TOOLS.map((action) => (
-                          <button
-                            key={action.id}
-                            onClick={() => handleQuickAction(ws.id, action)}
-                            className="w-full text-left px-2 py-1 rounded bg-zinc-900 hover:bg-zinc-800 text-white text-xs"
-                            title={action.command}
-                          >
-                            <div className="font-medium">{action.label}</div>
-                            <div className="font-mono text-zinc-400 truncate">
-                              {action.command}
-                            </div>
-                          </button>
-                        ))}
+                          );
+                        })}
                       </>
                     )}
                   </div>
@@ -789,12 +883,34 @@ export const Sidebar: React.FC = () => {
               onClick={() => handleGlobalTool(tool)}
               className="flex-1 min-w-0 overflow-hidden text-left"
             >
-              <div className="font-medium truncate">{tool.name}</div>
+              <div className="flex items-center gap-2">
+                <span
+                  className={`inline-block w-2 h-2 rounded-full ${openSessions.some((s) => s.workspaceId === "" && s.title === tool.name && s.running) ? "bg-green-500" : "bg-zinc-600"}`}
+                  aria-hidden="true"
+                />
+                <span className="font-medium truncate">{tool.name}</span>
+              </div>
               <div className="font-mono text-zinc-400 truncate">
                 {tool.command}
               </div>
             </button>
-            <div className="flex flex-shrink-0 items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+            <div className="flex flex-shrink-0 items-center gap-1">
+              {(() => {
+                const runningSession = openSessions.find(
+                  (s) => s.workspaceId === "" && s.title === tool.name,
+                );
+                if (!runningSession?.running) return null;
+                return (
+                  <button
+                    onClick={() => stopSession(runningSession.sessionId)}
+                    className="p-1 rounded text-red-400 hover:text-red-300 hover:bg-red-500/10"
+                    title="Stop"
+                  >
+                    <Square size={12} />
+                  </button>
+                );
+              })()}
+              <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
               <button
                 onClick={(e) => {
                   e.stopPropagation();
@@ -815,6 +931,7 @@ export const Sidebar: React.FC = () => {
               >
                 <Trash2 size={12} />
               </button>
+              </div>
             </div>
           </div>
         ))}
