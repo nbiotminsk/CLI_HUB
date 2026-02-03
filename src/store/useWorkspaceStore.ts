@@ -14,6 +14,7 @@ type Session = {
   running: boolean;
   pid?: number;
   cwd?: string;
+  keepOpen?: boolean;
 };
 
 interface WorkspaceState {
@@ -28,6 +29,7 @@ interface WorkspaceState {
   loadWorkspaces: () => Promise<void>;
   addWorkspaceFromPicker: () => Promise<void>;
   addWorkspace: (ws: Workspace) => Promise<void>;
+  deleteWorkspace: (workspaceId: string) => Promise<void>;
   loadCommands: (workspaceId: string) => Promise<void>;
   loadPackageScripts: (workspaceId: string) => Promise<void>;
   loadTemplates: () => Promise<void>;
@@ -49,6 +51,12 @@ interface WorkspaceState {
   deleteCommand: (workspaceId: string, commandId: string) => Promise<void>;
 
   openCommand: (workspaceId: string, commandId: string) => Promise<void>;
+  openQuickCommand: (
+    workspaceId: string,
+    title: string,
+    command: string,
+    options?: { runInWorkspace?: boolean },
+  ) => Promise<void>;
   createTerminalSession: (workspaceId?: string) => Promise<void>;
   closeSession: (sessionId: string) => Promise<void>;
   interruptSession: (sessionId: string) => Promise<void>;
@@ -121,7 +129,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
               ...s,
               running: status.isRunning,
               pid: status.pid,
-              commandId: "",
+              commandId: s.keepOpen ? s.commandId : "",
             }
           : s,
       ),
@@ -178,11 +186,51 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
     const saved = await electronAPI.addWorkspace(ws);
     set((state) => ({ workspaces: [...state.workspaces, saved] }));
     await get().loadCommands(saved.id);
+    await get().loadPackageScripts(saved.id);
   },
 
   addWorkspace: async (ws) => {
     const saved = await electronAPI.addWorkspace(ws);
     set((state) => ({ workspaces: [...state.workspaces, saved] }));
+  },
+
+  deleteWorkspace: async (workspaceId) => {
+    const sessionsToClose = get().openSessions.filter(
+      (s) => s.workspaceId === workspaceId,
+    );
+    await Promise.all(
+      sessionsToClose.map((s) => electronAPI.stopProcess(s.sessionId)),
+    );
+    await electronAPI.deleteWorkspace(workspaceId);
+    set((state) => {
+      const nextWorkspaces = state.workspaces.filter(
+        (w) => w.id !== workspaceId,
+      );
+      const nextOpenSessions = state.openSessions.filter(
+        (s) => s.workspaceId !== workspaceId,
+      );
+      let nextActive = state.activeSessionId;
+      if (
+        nextActive &&
+        !nextOpenSessions.some((s) => s.sessionId === nextActive)
+      ) {
+        nextActive =
+          nextOpenSessions.length > 0
+            ? nextOpenSessions[nextOpenSessions.length - 1].sessionId
+            : null;
+      }
+      const { [workspaceId]: _removedCommands, ...nextCommands } =
+        state.commandsByWs;
+      const { [workspaceId]: _removedScripts, ...nextScripts } =
+        state.scriptsByWs;
+      return {
+        workspaces: nextWorkspaces,
+        openSessions: nextOpenSessions,
+        activeSessionId: nextActive,
+        commandsByWs: nextCommands,
+        scriptsByWs: nextScripts,
+      };
+    });
   },
 
   loadCommands: async (workspaceId) => {
@@ -239,7 +287,8 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
     const ws = get().workspaces.find((w) => w.id === workspaceId);
     if (!cmd || !ws) return;
     const sessionId = crypto.randomUUID();
-    const cwd = cmd.cwd || ws.path;
+    const runInWorkspace = cmd.runInWorkspace !== false;
+    const cwd = runInWorkspace ? cmd.cwd || ws.path : "";
     await electronAPI.startProcess(sessionId, cmd.command, cwd);
     const status = await electronAPI.getProcessStatus(sessionId);
     const session: Session = {
@@ -250,12 +299,40 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
       running: status.isRunning,
       pid: status.pid,
       cwd,
+      keepOpen: cmd.category === "tool",
     };
     set((state) => ({
       openSessions: [...state.openSessions, session],
       activeSessionId: session.sessionId,
     }));
-    await get().updateCommand(workspaceId, commandId, { lastRunning: true });
+    if (cmd.category !== "tool") {
+      await get().updateCommand(workspaceId, commandId, { lastRunning: true });
+    }
+  },
+
+  openQuickCommand: async (workspaceId, title, command, options) => {
+    const ws = get().workspaces.find((w) => w.id === workspaceId);
+    const useWorkspace = options?.runInWorkspace !== false;
+    const cwd = useWorkspace ? ws?.path ?? "" : "";
+    const sessionId = crypto.randomUUID();
+    await electronAPI.startProcess(sessionId, command, cwd);
+    const status = await electronAPI.getProcessStatus(sessionId);
+
+    const session: Session = {
+      sessionId,
+      workspaceId: ws?.id ?? "",
+      commandId: "",
+      title,
+      running: status.isRunning,
+      pid: status.pid,
+      cwd,
+      keepOpen: true,
+    };
+
+    set((state) => ({
+      openSessions: [...state.openSessions, session],
+      activeSessionId: session.sessionId,
+    }));
   },
 
   createTerminalSession: async (workspaceId?: string) => {
@@ -283,6 +360,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
       running: status.isRunning,
       pid: status.pid,
       cwd,
+      keepOpen: false,
     };
 
     set((state) => ({

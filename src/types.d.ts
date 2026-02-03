@@ -16,6 +16,7 @@ export interface WorkspaceCommand {
   lastRunning?: boolean;
   autoStart?: boolean;
   category?: string;
+  runInWorkspace?: boolean;
   createdAt: string;
   updatedAt: string;
 }

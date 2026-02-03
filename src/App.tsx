@@ -120,7 +120,7 @@ function App() {
         const st = useWorkspaceStore.getState();
         const session = st.openSessions.find((s) => s.sessionId === sessionId);
         if (!session) return;
-        if (session.commandId) {
+        if (session.commandId || session.keepOpen) {
           st.restartSessionToShell(sessionId);
         } else {
           const updated = st.openSessions.map((s) =>

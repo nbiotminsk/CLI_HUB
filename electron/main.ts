@@ -44,6 +44,7 @@ interface WorkspaceCommand {
   cwd?: string;
   lastRunning?: boolean;
   autoStart?: boolean;
+  runInWorkspace?: boolean;
   createdAt: string;
   updatedAt: string;
 }
