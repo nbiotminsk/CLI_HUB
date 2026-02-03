@@ -61,6 +61,7 @@ interface WorkspaceState {
   closeSession: (sessionId: string) => Promise<void>;
   interruptSession: (sessionId: string) => Promise<void>;
   stopSession: (sessionId: string) => Promise<void>;
+  stopAllSessions: () => Promise<void>;
   setActiveSession: (sessionId: string | null) => void;
   nextSession: () => void;
   prevSession: () => void;
@@ -428,6 +429,12 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
         // Command may have been deleted; ignore
       }
     }
+  },
+
+  stopAllSessions: async () => {
+    const running = get().openSessions.filter((s) => s.running);
+    if (running.length === 0) return;
+    await Promise.all(running.map((s) => get().stopSession(s.sessionId)));
   },
 
   restoreAutoSessions: async () => {

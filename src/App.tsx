@@ -22,6 +22,7 @@ function App() {
     setActiveSession,
     loadWorkspaces,
     stopSession,
+    stopAllSessions,
     interruptSession,
     createTerminalSession,
     closeSession,
@@ -113,6 +114,7 @@ function App() {
   const activeSession = openSessions.find(
     (s) => s.sessionId === activeSessionId,
   );
+  const hasRunningSessions = openSessions.some((s) => s.running);
 
   useEffect(() => {
     const cleanup =
@@ -186,6 +188,16 @@ function App() {
                   </button>
                 </>
               )}
+              <button
+                onClick={() => stopAllSessions()}
+                disabled={!hasRunningSessions}
+                className="flex items-center gap-2 px-3 py-1.5 text-xs rounded bg-zinc-800 hover:bg-zinc-700 disabled:opacity-40 disabled:hover:bg-zinc-800 transition-colors"
+                aria-label="Stop all running processes"
+                title="Stop all"
+              >
+                <Square size={14} aria-hidden="true" />
+                Stop All
+              </button>
             </div>
           </div>
 
