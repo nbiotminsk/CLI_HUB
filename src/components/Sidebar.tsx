@@ -4,6 +4,8 @@ import {
   Play,
   Square,
   Terminal as TerminalIcon,
+  Folder,
+  FolderOpen,
   Pencil,
   Trash2,
   ChevronDown,
@@ -85,11 +87,14 @@ export const Sidebar: React.FC = () => {
     workspaceId: string,
     action: (typeof PROJECT_TOOLS)[number],
   ) => {
-    const existing = openSessions.find(
-      (s) => s.workspaceId === workspaceId && s.title === action.label,
+    const runningSession = openSessions.find(
+      (s) =>
+        s.workspaceId === workspaceId &&
+        s.title === action.label &&
+        s.running,
     );
-    if (existing) {
-      setActiveSession(existing.sessionId);
+    if (runningSession) {
+      setActiveSession(runningSession.sessionId);
       return;
     }
     openQuickCommand(workspaceId, action.label, action.command, {
@@ -98,11 +103,11 @@ export const Sidebar: React.FC = () => {
   };
 
   const handleGlobalTool = (tool: { name: string; command: string }) => {
-    const existing = openSessions.find(
-      (s) => s.workspaceId === "" && s.title === tool.name,
+    const runningSession = openSessions.find(
+      (s) => s.workspaceId === "" && s.title === tool.name && s.running,
     );
-    if (existing) {
-      setActiveSession(existing.sessionId);
+    if (runningSession) {
+      setActiveSession(runningSession.sessionId);
       return;
     }
     openQuickCommand("", tool.name, tool.command, {
@@ -158,11 +163,14 @@ export const Sidebar: React.FC = () => {
   };
 
   const handleRunTool = (workspaceId: string, tool: WorkspaceCommand) => {
-    const existing = openSessions.find(
-      (s) => s.workspaceId === workspaceId && s.commandId === tool.id,
+    const runningSession = openSessions.find(
+      (s) =>
+        s.workspaceId === workspaceId &&
+        s.commandId === tool.id &&
+        s.running,
     );
-    if (existing) {
-      setActiveSession(existing.sessionId);
+    if (runningSession) {
+      setActiveSession(runningSession.sessionId);
       return;
     }
     openCommand(workspaceId, tool.id);
@@ -314,7 +322,19 @@ export const Sidebar: React.FC = () => {
                 }}
               >
                 <div className="flex items-center gap-2 overflow-hidden">
-                  <div className="w-2 h-2 rounded-full flex-shrink-0 bg-zinc-600" />
+                  {isExpanded ? (
+                    <FolderOpen
+                      size={14}
+                      className="flex-shrink-0 text-zinc-400"
+                      aria-hidden="true"
+                    />
+                  ) : (
+                    <Folder
+                      size={14}
+                      className="flex-shrink-0 text-zinc-400"
+                      aria-hidden="true"
+                    />
+                  )}
                   <span className="text-sm text-zinc-300 truncate font-medium select-none">
                     {ws.name}
                   </span>
@@ -478,9 +498,11 @@ export const Sidebar: React.FC = () => {
                           const label = toNpmScriptCommand(name);
                           const runningSession = openSessions.find(
                             (s) =>
-                              s.workspaceId === ws.id && s.title === label,
+                              s.workspaceId === ws.id &&
+                              s.title === label &&
+                              s.running,
                           );
-                          const isRunning = !!runningSession?.running;
+                          const isRunning = !!runningSession;
                           return (
                             <div
                               key={name}
@@ -498,8 +520,11 @@ export const Sidebar: React.FC = () => {
                                 className="flex-1 min-w-0 overflow-hidden text-left"
                               >
                                 <div className="flex items-center gap-2">
-                                  <span
-                                    className={`inline-block w-2 h-2 rounded-full ${isRunning ? "bg-green-500" : "bg-zinc-600"}`}
+                                  <TerminalIcon
+                                    size={12}
+                                    className={
+                                      isRunning ? "text-green-400" : "text-zinc-500"
+                                    }
                                     aria-hidden="true"
                                   />
                                   <span className="font-medium truncate">
@@ -662,9 +687,10 @@ export const Sidebar: React.FC = () => {
                             const runningSession = openSessions.find(
                               (s) =>
                                 s.workspaceId === ws.id &&
-                                s.commandId === tool.id,
+                                s.commandId === tool.id &&
+                                s.running,
                             );
-                            const isRunning = !!runningSession?.running;
+                            const isRunning = !!runningSession;
                             return (
                               <div
                                 key={tool.id}

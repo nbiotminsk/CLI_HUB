@@ -128,6 +128,7 @@ const ptyProcesses: Record<string, pty.IPty> = {};
 let resolvedPath: string | undefined;
 const stopPromises: Record<string, Promise<void> | undefined> = {};
 let isShuttingDown = false;
+let isQuitting = false;
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -420,11 +421,21 @@ async function shutdownAll(): Promise<void> {
   if (isShuttingDown) return;
   isShuttingDown = true;
   const ids = Object.keys(ptyProcesses);
+  if (ids.length === 0) return;
   await Promise.allSettled(ids.map((id) => terminatePty(id, "stop")));
 }
 
-app.on("before-quit", () => {
-  shutdownAll();
+app.on("before-quit", (event) => {
+  if (isQuitting) return;
+  isQuitting = true;
+  event.preventDefault();
+  shutdownAll()
+    .catch(() => {
+      // ignore shutdown errors
+    })
+    .finally(() => {
+      app.exit(0);
+    });
 });
 
 app.on("will-quit", () => {
