@@ -358,10 +358,10 @@ export const Sidebar: React.FC = () => {
                     return (
                       <div
                         key={cmd.id}
-                        className="group flex items-center justify-between p-2 rounded hover:bg-zinc-800/40"
+                        className="group flex items-center justify-between gap-2 p-2 rounded hover:bg-zinc-800/40"
                       >
                         <div
-                          className="flex items-center gap-2 overflow-hidden cursor-pointer"
+                          className="flex flex-1 min-w-0 items-center gap-2 overflow-hidden cursor-pointer"
                           onClick={() => {
                             if (runningSession) {
                               setActiveSession(runningSession.sessionId);
@@ -377,7 +377,7 @@ export const Sidebar: React.FC = () => {
                             {cmd.name}
                           </span>
                         </div>
-                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <div className="flex flex-shrink-0 items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                           {isRunning ? (
                             <button
                               onClick={(e) => {
@@ -626,19 +626,21 @@ export const Sidebar: React.FC = () => {
                         {toolCommands.map((tool) => (
                           <div
                             key={tool.id}
-                            className="group flex items-center justify-between px-2 py-1 rounded bg-zinc-900 hover:bg-zinc-800 text-white text-xs"
+                            className="group flex items-center justify-between gap-2 px-2 py-1 rounded bg-zinc-900 hover:bg-zinc-800 text-white text-xs"
                             title={tool.command}
                           >
                             <button
                               onClick={() => handleRunTool(ws.id, tool)}
-                              className="flex-1 text-left"
+                              className="flex-1 min-w-0 overflow-hidden text-left"
                             >
-                              <div className="font-medium">{tool.name}</div>
+                              <div className="font-medium truncate">
+                                {tool.name}
+                              </div>
                               <div className="font-mono text-zinc-400 truncate">
                                 {tool.command}
                               </div>
                             </button>
-                            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <div className="flex flex-shrink-0 items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                               <button
                                 onClick={(e) => {
                                   e.stopPropagation();
@@ -780,19 +782,19 @@ export const Sidebar: React.FC = () => {
         {globalTools.map((tool) => (
           <div
             key={tool.id}
-            className="group flex items-center justify-between px-2 py-1 rounded bg-zinc-900 hover:bg-zinc-800 text-white text-xs"
+            className="group flex items-center justify-between gap-2 px-2 py-1 rounded bg-zinc-900 hover:bg-zinc-800 text-white text-xs"
             title={tool.command}
           >
             <button
               onClick={() => handleGlobalTool(tool)}
-              className="flex-1 text-left"
+              className="flex-1 min-w-0 overflow-hidden text-left"
             >
-              <div className="font-medium">{tool.name}</div>
+              <div className="font-medium truncate">{tool.name}</div>
               <div className="font-mono text-zinc-400 truncate">
                 {tool.command}
               </div>
             </button>
-            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+            <div className="flex flex-shrink-0 items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
               <button
                 onClick={(e) => {
                   e.stopPropagation();

@@ -60,6 +60,22 @@ type CommandTemplate = {
 
 const DEFAULT_GLOBAL_TOOLS: CommandTemplate[] = [
   {
+    id: "global-install-gemini",
+    name: "Install Gemini",
+    command: "sudo npm install -g @google/gemini-cli",
+    category: "global-tool",
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: "global-install-claude-code",
+    name: "Install Claude Code",
+    command: "sudo npm install -g @anthropic-ai/claude-code",
+    category: "global-tool",
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
     id: "global-update-gemini",
     name: "Update Gemini",
     command: "npm update -g @google/gemini-cli",
@@ -97,9 +113,15 @@ const store = new Store<{
   },
 });
 
-if (!store.has("templates")) {
-  store.set("templates", DEFAULT_GLOBAL_TOOLS);
+function ensureDefaultGlobalTools(): void {
+  const existing = store.get("templates") ?? [];
+  const existingIds = new Set(existing.map((tpl) => tpl.id));
+  const missing = DEFAULT_GLOBAL_TOOLS.filter((tpl) => !existingIds.has(tpl.id));
+  if (missing.length === 0) return;
+  store.set("templates", [...existing, ...missing]);
 }
+
+ensureDefaultGlobalTools();
 
 let mainWindow: BrowserWindow | null = null;
 const ptyProcesses: Record<string, pty.IPty> = {};
