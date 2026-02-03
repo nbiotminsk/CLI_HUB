@@ -757,9 +757,10 @@ export const Sidebar: React.FC = () => {
                           const runningSession = openSessions.find(
                             (s) =>
                               s.workspaceId === ws.id &&
-                              s.title === action.label,
+                              s.title === action.label &&
+                              s.running,
                           );
-                          const isRunning = !!runningSession?.running;
+                          const isRunning = !!runningSession;
                           return (
                             <div
                               key={action.id}
@@ -923,7 +924,8 @@ export const Sidebar: React.FC = () => {
             <div className="flex flex-shrink-0 items-center gap-1">
               {(() => {
                 const runningSession = openSessions.find(
-                  (s) => s.workspaceId === "" && s.title === tool.name,
+                  (s) =>
+                    s.workspaceId === "" && s.title === tool.name && s.running,
                 );
                 if (!runningSession?.running) return null;
                 return (
