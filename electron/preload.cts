@@ -2,6 +2,7 @@ import {
   type IpcRenderer,
   type IpcRendererEvent,
   contextBridge,
+  ipcRenderer,
 } from "electron";
 
 type Workspace = {
@@ -33,104 +34,55 @@ type CommandTemplate = {
   updatedAt: string;
 };
 
+// Use ipcRenderer directly instead of contextBridge pattern
 contextBridge.exposeInMainWorld("electronAPI", {
   // Workspaces
-  selectDirectory: () =>
-    (
-      window as unknown as { electron: { ipcRenderer: IpcRenderer } }
-    ).electron.ipcRenderer.invoke("select-directory"),
-  getWorkspaces: () =>
-    (
-      window as unknown as { electron: { ipcRenderer: IpcRenderer } }
-    ).electron.ipcRenderer.invoke("get-workspaces"),
+  selectDirectory: () => ipcRenderer.invoke("select-directory"),
+  getWorkspaces: () => ipcRenderer.invoke("get-workspaces"),
   addWorkspace: (workspace: Workspace) =>
-    (
-      window as unknown as { electron: { ipcRenderer: IpcRenderer } }
-    ).electron.ipcRenderer.invoke("add-workspace", workspace),
+    ipcRenderer.invoke("add-workspace", workspace),
   updateWorkspace: (id: string, workspace: Partial<Workspace>) =>
-    (
-      window as unknown as { electron: { ipcRenderer: IpcRenderer } }
-    ).electron.ipcRenderer.invoke("update-workspace", id, workspace),
-  deleteWorkspace: (id: string) =>
-    (
-      window as unknown as { electron: { ipcRenderer: IpcRenderer } }
-    ).electron.ipcRenderer.invoke("delete-workspace", id),
+    ipcRenderer.invoke("update-workspace", id, workspace),
+  deleteWorkspace: (id: string) => ipcRenderer.invoke("delete-workspace", id),
 
   getWorkspaceCommands: (workspaceId: string) =>
-    (
-      window as unknown as { electron: { ipcRenderer: IpcRenderer } }
-    ).electron.ipcRenderer.invoke("get-workspace-commands", workspaceId),
+    ipcRenderer.invoke("get-workspace-commands", workspaceId),
   addWorkspaceCommand: (workspaceId: string, command: WorkspaceCommand) =>
-    (
-      window as unknown as { electron: { ipcRenderer: IpcRenderer } }
-    ).electron.ipcRenderer.invoke(
-      "add-workspace-command",
-      workspaceId,
-      command,
-    ),
+    ipcRenderer.invoke("add-workspace-command", workspaceId, command),
   updateWorkspaceCommand: (
     workspaceId: string,
     commandId: string,
     updates: Partial<WorkspaceCommand>,
   ) =>
-    (
-      window as unknown as { electron: { ipcRenderer: IpcRenderer } }
-    ).electron.ipcRenderer.invoke(
+    ipcRenderer.invoke(
       "update-workspace-command",
       workspaceId,
       commandId,
       updates,
     ),
   deleteWorkspaceCommand: (workspaceId: string, commandId: string) =>
-    (
-      window as unknown as { electron: { ipcRenderer: IpcRenderer } }
-    ).electron.ipcRenderer.invoke(
-      "delete-workspace-command",
-      workspaceId,
-      commandId,
-    ),
+    ipcRenderer.invoke("delete-workspace-command", workspaceId, commandId),
   getPackageScripts: (workspaceId: string) =>
-    (
-      window as unknown as { electron: { ipcRenderer: IpcRenderer } }
-    ).electron.ipcRenderer.invoke("get-package-scripts", workspaceId),
+    ipcRenderer.invoke("get-package-scripts", workspaceId),
 
   // Ports
-  listPorts: () =>
-    (
-      window as unknown as { electron: { ipcRenderer: IpcRenderer } }
-    ).electron.ipcRenderer.invoke("list-ports"),
+  listPorts: () => ipcRenderer.invoke("list-ports"),
   freePort: (port: number, pid?: number) =>
-    (
-      window as unknown as { electron: { ipcRenderer: IpcRenderer } }
-    ).electron.ipcRenderer.invoke("free-port", port, pid),
+    ipcRenderer.invoke("free-port", port, pid),
 
   // Processes
   startProcess: (id: string, command: string, cwd: string) =>
-    (
-      window as unknown as { electron: { ipcRenderer: IpcRenderer } }
-    ).electron.ipcRenderer.invoke("start-process", id, command, cwd),
-  interruptProcess: (id: string) =>
-    (
-      window as unknown as { electron: { ipcRenderer: IpcRenderer } }
-    ).electron.ipcRenderer.invoke("interrupt-process", id),
-  stopProcess: (id: string) =>
-    (
-      window as unknown as { electron: { ipcRenderer: IpcRenderer } }
-    ).electron.ipcRenderer.invoke("stop-process", id),
+    ipcRenderer.invoke("start-process", id, command, cwd),
+  interruptProcess: (id: string) => ipcRenderer.invoke("interrupt-process", id),
+  stopProcess: (id: string) => ipcRenderer.invoke("stop-process", id),
   getProcessStatus: (id: string) =>
-    (
-      window as unknown as { electron: { ipcRenderer: IpcRenderer } }
-    ).electron.ipcRenderer.invoke("get-process-status", id),
+    ipcRenderer.invoke("get-process-status", id),
 
   // Terminal
   terminalWrite: (id: string, data: string) =>
-    (
-      window as unknown as { electron: { ipcRenderer: IpcRenderer } }
-    ).electron.ipcRenderer.invoke("terminal-write", id, data),
+    ipcRenderer.invoke("terminal-write", id, data),
   terminalResize: (id: string, cols: number, rows: number) =>
-    (
-      window as unknown as { electron: { ipcRenderer: IpcRenderer } }
-    ).electron.ipcRenderer.invoke("terminal-resize", id, cols, rows),
+    ipcRenderer.invoke("terminal-resize", id, cols, rows),
 
   // Events
   onTerminalData: (callback: (projectId: string, data: string) => void) => {
@@ -139,13 +91,8 @@ contextBridge.exposeInMainWorld("electronAPI", {
       projectId: string,
       data: string,
     ) => callback(projectId, data);
-    (
-      window as unknown as { electron: { ipcRenderer: IpcRenderer } }
-    ).electron.ipcRenderer.on("terminal-data", handler);
-    return () =>
-      (
-        window as unknown as { electron: { ipcRenderer: IpcRenderer } }
-      ).electron.ipcRenderer.removeListener("terminal-data", handler);
+    ipcRenderer.on("terminal-data", handler);
+    return () => ipcRenderer.removeListener("terminal-data", handler);
   },
   onProcessExit: (callback: (projectId: string, exitCode: number) => void) => {
     const handler = (
@@ -153,29 +100,14 @@ contextBridge.exposeInMainWorld("electronAPI", {
       projectId: string,
       exitCode: number,
     ) => callback(projectId, exitCode);
-    (
-      window as unknown as { electron: { ipcRenderer: IpcRenderer } }
-    ).electron.ipcRenderer.on("process-exit", handler);
-    return () =>
-      (
-        window as unknown as { electron: { ipcRenderer: IpcRenderer } }
-      ).electron.ipcRenderer.removeListener("process-exit", handler);
+    ipcRenderer.on("process-exit", handler);
+    return () => ipcRenderer.removeListener("process-exit", handler);
   },
 
-  getTemplates: () =>
-    (
-      window as unknown as { electron: { ipcRenderer: IpcRenderer } }
-    ).electron.ipcRenderer.invoke("get-templates"),
+  getTemplates: () => ipcRenderer.invoke("get-templates"),
   addTemplate: (tpl: CommandTemplate) =>
-    (
-      window as unknown as { electron: { ipcRenderer: IpcRenderer } }
-    ).electron.ipcRenderer.invoke("add-template", tpl),
+    ipcRenderer.invoke("add-template", tpl),
   updateTemplate: (id: string, updates: Partial<CommandTemplate>) =>
-    (
-      window as unknown as { electron: { ipcRenderer: IpcRenderer } }
-    ).electron.ipcRenderer.invoke("update-template", id, updates),
-  deleteTemplate: (id: string) =>
-    (
-      window as unknown as { electron: { ipcRenderer: IpcRenderer } }
-    ).electron.ipcRenderer.invoke("delete-template", id),
+    ipcRenderer.invoke("update-template", id, updates),
+  deleteTemplate: (id: string) => ipcRenderer.invoke("delete-template", id),
 });

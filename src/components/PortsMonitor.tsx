@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import type { PortInfo } from "../types";
 import { POLLING_INTERVAL_MS } from "../constants";
+import { electronAPI } from "../lib/electron";
 
 type FreeResult = { port: number; pid?: number; status: string };
 
@@ -19,7 +20,7 @@ export function PortsMonitor({ isOpen = true }: PortsMonitorProps) {
     try {
       setIsLoading(true);
       setError(null);
-      const list = await window.electronAPI.listPorts();
+      const list = await electronAPI.listPorts();
       setPorts(list);
     } catch {
       setError("Не удалось получить список портов");
@@ -40,7 +41,7 @@ export function PortsMonitor({ isOpen = true }: PortsMonitorProps) {
     const key = `${row.port}:${row.pid}`;
     try {
       setFreeing((s) => ({ ...s, [key]: true }));
-      const res: FreeResult = await window.electronAPI.freePort(
+      const res: FreeResult = await electronAPI.freePort(
         row.port,
         row.pid,
       );

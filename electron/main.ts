@@ -12,7 +12,7 @@ import {
   SIGINT_TIMEOUT_MS,
   SIGTERM_TIMEOUT_MS,
   SIGKILL_TIMEOUT_MS,
-} from "../src/constants";
+} from "./constants.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -160,6 +160,15 @@ async function terminatePty(
   const ptyProcess = ptyProcesses[projectId];
   const pid = ptyProcess?.pid;
   if (!ptyProcess || !pid) return;
+
+  if (mode === "interrupt" && shellOnlyByProject[projectId]) {
+    try {
+      ptyProcess.write("\x03");
+    } catch {
+      // Write may fail if process already exited
+    }
+    return;
+  }
 
   const task = (async () => {
     if (mode === "interrupt") {

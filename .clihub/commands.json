@@ -6,7 +6,7 @@
       "name": "сборка",
       "command": "npm run build && electron-builder",
       "createdAt": "2026-01-31T19:12:06.505Z",
-      "updatedAt": "2026-01-31T19:39:32.105Z",
+      "updatedAt": "2026-01-31T23:21:58.625Z",
       "lastRunning": true
     }
   ]

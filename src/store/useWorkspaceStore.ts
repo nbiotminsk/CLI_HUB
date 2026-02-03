@@ -101,12 +101,28 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
     const session = st.openSessions.find((s) => s.sessionId === sessionId);
     if (!session) return;
     const cwd = session.cwd || "";
+    const workspaceId = session.workspaceId;
+    const commandId = session.commandId;
     await electronAPI.startProcess(sessionId, "", cwd);
     const status = await electronAPI.getProcessStatus(sessionId);
+    if (workspaceId && commandId) {
+      try {
+        await get().updateCommand(workspaceId, commandId, {
+          lastRunning: false,
+        });
+      } catch {
+        // Command may have been deleted; ignore
+      }
+    }
     set((state) => ({
       openSessions: state.openSessions.map((s) =>
         s.sessionId === sessionId
-          ? { ...s, running: status.isRunning, pid: status.pid }
+          ? {
+              ...s,
+              running: status.isRunning,
+              pid: status.pid,
+              commandId: "",
+            }
           : s,
       ),
     }));
@@ -301,9 +317,15 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
         activeSessionId: newActive,
       };
     });
-    await get().updateCommand(session.workspaceId, session.commandId, {
-      lastRunning: false,
-    });
+    if (session.workspaceId && session.commandId) {
+      try {
+        await get().updateCommand(session.workspaceId, session.commandId, {
+          lastRunning: false,
+        });
+      } catch {
+        // Command may have been deleted; ignore
+      }
+    }
   },
 
   interruptSession: async (sessionId) => {
@@ -312,11 +334,22 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
 
   stopSession: async (sessionId) => {
     await electronAPI.stopProcess(sessionId);
+    const st = get();
+    const session = st.openSessions.find((s) => s.sessionId === sessionId);
     set((state) => ({
       openSessions: state.openSessions.map((s) =>
         s.sessionId === sessionId ? { ...s, running: false } : s,
       ),
     }));
+    if (session?.workspaceId && session.commandId) {
+      try {
+        await get().updateCommand(session.workspaceId, session.commandId, {
+          lastRunning: false,
+        });
+      } catch {
+        // Command may have been deleted; ignore
+      }
+    }
   },
 
   restoreAutoSessions: async () => {
