@@ -5,7 +5,7 @@
 </p>
 
 <p align="center">
-  <b>Modern Command-Line Workflow Manager for Developers</b>
+  <b>One place to manage projects and run their commands without remembering them</b>
 </p>
 
 <p align="center">
@@ -20,7 +20,7 @@
 
 ## 🌐 English
 
-**CLI Hub** is a powerful desktop application designed to organize and manage complex command-line workflows. Stop juggling dozens of terminal windows and start grouping your commands into clean, manageable workspaces.
+**CLI Hub** is a desktop app that keeps all your projects and their commands in one place. Open a project, see the available scripts/tools, run them with one click, and switch between running tasks without retyping long commands.
 
 ### ✨ Key Features
 
@@ -74,7 +74,7 @@
 
 ## 🇷🇺 Русский
 
-**CLI Hub** — это мощное настольное приложение для разработчиков, предназначенное для наведения порядка в консольных рабочих процессах. Забудьте о десятках открытых окон терминала — группируйте команды в удобные и понятные рабочие области.
+**CLI Hub** — настольное приложение, где все проекты и их команды собраны в одном месте. Открыл проект, увидел список скриптов/инструментов, запустил в один клик и быстро переключаешься между задачами без ручного ввода команд.
 
 ### ✨ Основные возможности
 
