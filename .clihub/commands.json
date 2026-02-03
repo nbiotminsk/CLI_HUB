@@ -1,13 +1,4 @@
 {
   "version": 1,
-  "commands": [
-    {
-      "id": "871b15cc-eb02-4a57-97a8-6d9707f62411",
-      "name": "сборка",
-      "command": "npm run build && electron-builder",
-      "createdAt": "2026-01-31T19:12:06.505Z",
-      "updatedAt": "2026-02-03T22:06:03.940Z",
-      "lastRunning": false
-    }
-  ]
+  "commands": []
 }
