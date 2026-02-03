@@ -22,9 +22,12 @@ export type QuickAction = {
   runInWorkspace?: boolean;
 };
 
-export const QUICK_ACTIONS: QuickAction[] = [
+export const PROJECT_TOOLS: QuickAction[] = [
   { id: "tool-gemini", label: "Gemini", command: "gemini", runInWorkspace: true },
   { id: "tool-claude", label: "Claude", command: "claude", runInWorkspace: true },
+];
+
+export const GLOBAL_TOOLS: QuickAction[] = [
   {
     id: "update-gemini",
     label: "Update Gemini",

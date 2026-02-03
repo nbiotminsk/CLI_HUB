@@ -6,10 +6,12 @@ import {
   Terminal as TerminalIcon,
   Pencil,
   Trash2,
+  ChevronDown,
+  ChevronRight,
 } from "lucide-react";
 import { useWorkspaceStore } from "../store/useWorkspaceStore";
 import type { WorkspaceCommand } from "../types";
-import { QUICK_ACTIONS } from "../constants";
+import { PROJECT_TOOLS, GLOBAL_TOOLS } from "../constants";
 
 export const Sidebar: React.FC = () => {
   const {
@@ -43,6 +45,12 @@ export const Sidebar: React.FC = () => {
   const [editToolName, setEditToolName] = useState("");
   const [editToolCmd, setEditToolCmd] = useState("");
   const [editToolInWorkspace, setEditToolInWorkspace] = useState(true);
+  const [scriptsOpenByWs, setScriptsOpenByWs] = useState<
+    Record<string, boolean>
+  >({});
+  const [toolsOpenByWs, setToolsOpenByWs] = useState<Record<string, boolean>>(
+    {},
+  );
   const [previewCmd, setPreviewCmd] = useState<{
     wsId: string;
     cmd: WorkspaceCommand;
@@ -58,7 +66,7 @@ export const Sidebar: React.FC = () => {
 
   const handleQuickAction = (
     workspaceId: string,
-    action: (typeof QUICK_ACTIONS)[number],
+    action: (typeof PROJECT_TOOLS)[number],
   ) => {
     const existing = openSessions.find(
       (s) => s.workspaceId === workspaceId && s.title === action.label,
@@ -68,6 +76,19 @@ export const Sidebar: React.FC = () => {
       return;
     }
     openQuickCommand(workspaceId, action.label, action.command, {
+      runInWorkspace: action.runInWorkspace,
+    });
+  };
+
+  const handleGlobalTool = (action: (typeof GLOBAL_TOOLS)[number]) => {
+    const existing = openSessions.find(
+      (s) => s.workspaceId === "" && s.title === action.label,
+    );
+    if (existing) {
+      setActiveSession(existing.sessionId);
+      return;
+    }
+    openQuickCommand("", action.label, action.command, {
       runInWorkspace: action.runInWorkspace,
     });
   };
@@ -151,6 +172,7 @@ export const Sidebar: React.FC = () => {
     setEditToolCmd(tool.command);
     setEditToolInWorkspace(tool.runInWorkspace !== false);
     setAddingToolWsId(null);
+    setToolsOpenByWs((prev) => ({ ...prev, [workspaceId]: true }));
   };
 
   const handleSaveTool = async (workspaceId: string) => {
@@ -210,6 +232,8 @@ export const Sidebar: React.FC = () => {
           const scripts = scriptsByWs[ws.id] || {};
           const scriptEntries = Object.entries(scripts);
           const isExpanded = expandedWsId === ws.id;
+          const isScriptsOpen = !!scriptsOpenByWs[ws.id];
+          const isToolsOpen = !!toolsOpenByWs[ws.id];
           return (
             <div key={ws.id} className="rounded">
               <div
@@ -359,198 +383,256 @@ export const Sidebar: React.FC = () => {
                     </div>
                   )}
                   <div className="mt-2 space-y-1">
-                    <div className="text-[11px] uppercase tracking-wide text-zinc-500">
+                    <button
+                      onClick={() =>
+                        setScriptsOpenByWs((prev) => ({
+                          ...prev,
+                          [ws.id]: !isScriptsOpen,
+                        }))
+                      }
+                      className="flex items-center gap-2 text-[11px] uppercase tracking-wide text-zinc-500 hover:text-white"
+                    >
+                      {isScriptsOpen ? (
+                        <ChevronDown size={12} />
+                      ) : (
+                        <ChevronRight size={12} />
+                      )}
                       Scripts
-                    </div>
-                    {scriptEntries.length === 0 && (
-                      <div className="text-xs text-zinc-600">
-                        Нет скриптов в package.json
-                      </div>
-                    )}
-                    {scriptEntries.map(([name, cmd]) => {
-                      const label = toNpmScriptCommand(name);
-                      return (
-                        <button
-                          key={name}
-                          onClick={() => handleRunScript(ws.id, name)}
-                          className="w-full text-left px-2 py-1 rounded bg-zinc-900 hover:bg-zinc-800 text-white text-xs"
-                          title={cmd}
-                        >
-                          <div className="font-medium">{label}</div>
-                          <div className="font-mono text-zinc-400 truncate">
-                            {cmd}
+                    </button>
+                    {isScriptsOpen && (
+                      <>
+                        {scriptEntries.length === 0 && (
+                          <div className="text-xs text-zinc-600">
+                            Нет скриптов в package.json
                           </div>
-                        </button>
-                      );
-                    })}
+                        )}
+                        {scriptEntries.map(([name, cmd]) => {
+                          const label = toNpmScriptCommand(name);
+                          return (
+                            <button
+                              key={name}
+                              onClick={() => handleRunScript(ws.id, name)}
+                              className="w-full text-left px-2 py-1 rounded bg-zinc-900 hover:bg-zinc-800 text-white text-xs"
+                              title={cmd}
+                            >
+                              <div className="font-medium">{label}</div>
+                              <div className="font-mono text-zinc-400 truncate">
+                                {cmd}
+                              </div>
+                            </button>
+                          );
+                        })}
+                      </>
+                    )}
                   </div>
                   <div className="mt-3 space-y-1">
                     <div className="flex items-center justify-between">
-                      <div className="text-[11px] uppercase tracking-wide text-zinc-500">
-                        Tools
-                      </div>
                       <button
-                        onClick={() => setAddingToolWsId(ws.id)}
+                        onClick={() =>
+                          setToolsOpenByWs((prev) => ({
+                            ...prev,
+                            [ws.id]: !isToolsOpen,
+                          }))
+                        }
+                        className="flex items-center gap-2 text-[11px] uppercase tracking-wide text-zinc-500 hover:text-white"
+                      >
+                        {isToolsOpen ? (
+                          <ChevronDown size={12} />
+                        ) : (
+                          <ChevronRight size={12} />
+                        )}
+                        Tools
+                      </button>
+                      <button
+                        onClick={() => {
+                          setAddingToolWsId(ws.id);
+                          setToolsOpenByWs((prev) => ({
+                            ...prev,
+                            [ws.id]: true,
+                          }));
+                        }}
                         className="text-[11px] text-zinc-400 hover:text-white"
                         title="Add tool"
                       >
                         + Tool
                       </button>
                     </div>
-                    {editingToolWsId === ws.id && (
-                      <div className="space-y-2 p-2 border border-zinc-800 rounded">
-                        <div className="text-xs text-zinc-400">
-                          Редактировать инструмент
-                        </div>
-                        <input
-                          value={editToolName}
-                          onChange={(e) => setEditToolName(e.target.value)}
-                          placeholder="Имя инструмента"
-                          className="w-full bg-zinc-800 border border-zinc-700 rounded p-2 text-white"
-                        />
-                        <input
-                          value={editToolCmd}
-                          onChange={(e) => setEditToolCmd(e.target.value)}
-                          placeholder="Команда"
-                          className="w-full bg-zinc-800 border border-zinc-700 rounded p-2 text-white"
-                        />
-                        <label className="flex items-center gap-2 text-xs text-zinc-400">
-                          <input
-                            type="checkbox"
-                            checked={editToolInWorkspace}
-                            onChange={(e) =>
-                              setEditToolInWorkspace(e.target.checked)
-                            }
-                            className="rounded bg-zinc-800 border-zinc-700"
-                          />
-                          Запускать в проекте
-                        </label>
-                        <div className="flex gap-2">
-                          <button
-                            onClick={() => handleSaveTool(ws.id)}
-                            className="px-3 py-1.5 text-xs rounded bg-blue-600 hover:bg-blue-500 text-white"
-                          >
-                            Сохранить
-                          </button>
-                          <button
-                            onClick={() => {
-                              setEditingToolWsId(null);
-                              setEditingToolId(null);
-                              setEditToolName("");
-                              setEditToolCmd("");
-                              setEditToolInWorkspace(true);
-                            }}
-                            className="px-3 py-1.5 text-xs rounded bg-zinc-800 hover:bg-zinc-700"
-                          >
-                            Отмена
-                          </button>
-                        </div>
-                      </div>
-                    )}
-                    {addingToolWsId === ws.id && (
-                      <div className="space-y-2 p-2 border border-zinc-800 rounded">
-                        <input
-                          value={newToolName}
-                          onChange={(e) => setNewToolName(e.target.value)}
-                          placeholder="Имя инструмента (например, OpenCode)"
-                          className="w-full bg-zinc-800 border border-zinc-700 rounded p-2 text-white"
-                        />
-                        <input
-                          value={newToolCmd}
-                          onChange={(e) => setNewToolCmd(e.target.value)}
-                          placeholder="Команда (например, opencode)"
-                          className="w-full bg-zinc-800 border border-zinc-700 rounded p-2 text-white"
-                        />
-                        <label className="flex items-center gap-2 text-xs text-zinc-400">
-                          <input
-                            type="checkbox"
-                            checked={newToolInWorkspace}
-                            onChange={(e) =>
-                              setNewToolInWorkspace(e.target.checked)
-                            }
-                            className="rounded bg-zinc-800 border-zinc-700"
-                          />
-                          Запускать в проекте
-                        </label>
-                        <div className="flex gap-2">
-                          <button
-                            onClick={() => handleAddTool(ws.id)}
-                            className="px-3 py-1.5 text-xs rounded bg-blue-600 hover:bg-blue-500 text-white"
-                          >
-                            Сохранить
-                          </button>
-                          <button
-                            onClick={() => {
-                              setAddingToolWsId(null);
-                              setNewToolName("");
-                              setNewToolCmd("");
-                              setNewToolInWorkspace(true);
-                            }}
-                            className="px-3 py-1.5 text-xs rounded bg-zinc-800 hover:bg-zinc-700"
-                          >
-                            Отмена
-                          </button>
-                        </div>
-                      </div>
-                    )}
-                    {toolCommands.map((tool) => (
-                      <div
-                        key={tool.id}
-                        className="group flex items-center justify-between px-2 py-1 rounded bg-zinc-900 hover:bg-zinc-800 text-white text-xs"
-                        title={tool.command}
-                      >
-                        <button
-                          onClick={() => handleRunTool(ws.id, tool)}
-                          className="flex-1 text-left"
-                        >
-                          <div className="font-medium">{tool.name}</div>
-                          <div className="font-mono text-zinc-400 truncate">
-                            {tool.command}
+                    {isToolsOpen && (
+                      <>
+                        {editingToolWsId === ws.id && (
+                          <div className="space-y-2 p-2 border border-zinc-800 rounded">
+                            <div className="text-xs text-zinc-400">
+                              Редактировать инструмент
+                            </div>
+                            <input
+                              value={editToolName}
+                              onChange={(e) => setEditToolName(e.target.value)}
+                              placeholder="Имя инструмента"
+                              className="w-full bg-zinc-800 border border-zinc-700 rounded p-2 text-white"
+                            />
+                            <input
+                              value={editToolCmd}
+                              onChange={(e) => setEditToolCmd(e.target.value)}
+                              placeholder="Команда"
+                              className="w-full bg-zinc-800 border border-zinc-700 rounded p-2 text-white"
+                            />
+                            <label className="flex items-center gap-2 text-xs text-zinc-400">
+                              <input
+                                type="checkbox"
+                                checked={editToolInWorkspace}
+                                onChange={(e) =>
+                                  setEditToolInWorkspace(e.target.checked)
+                                }
+                                className="rounded bg-zinc-800 border-zinc-700"
+                              />
+                              Запускать в проекте
+                            </label>
+                            <div className="flex gap-2">
+                              <button
+                                onClick={() => handleSaveTool(ws.id)}
+                                className="px-3 py-1.5 text-xs rounded bg-blue-600 hover:bg-blue-500 text-white"
+                              >
+                                Сохранить
+                              </button>
+                              <button
+                                onClick={() => {
+                                  setEditingToolWsId(null);
+                                  setEditingToolId(null);
+                                  setEditToolName("");
+                                  setEditToolCmd("");
+                                  setEditToolInWorkspace(true);
+                                }}
+                                className="px-3 py-1.5 text-xs rounded bg-zinc-800 hover:bg-zinc-700"
+                              >
+                                Отмена
+                              </button>
+                            </div>
                           </div>
-                        </button>
-                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              beginEditTool(ws.id, tool);
-                            }}
-                            className="p-1 rounded text-zinc-400 hover:text-white hover:bg-zinc-700"
-                            title="Edit tool"
+                        )}
+                        {addingToolWsId === ws.id && (
+                          <div className="space-y-2 p-2 border border-zinc-800 rounded">
+                            <input
+                              value={newToolName}
+                              onChange={(e) => setNewToolName(e.target.value)}
+                              placeholder="Имя инструмента (например, OpenCode)"
+                              className="w-full bg-zinc-800 border border-zinc-700 rounded p-2 text-white"
+                            />
+                            <input
+                              value={newToolCmd}
+                              onChange={(e) => setNewToolCmd(e.target.value)}
+                              placeholder="Команда (например, opencode)"
+                              className="w-full bg-zinc-800 border border-zinc-700 rounded p-2 text-white"
+                            />
+                            <label className="flex items-center gap-2 text-xs text-zinc-400">
+                              <input
+                                type="checkbox"
+                                checked={newToolInWorkspace}
+                                onChange={(e) =>
+                                  setNewToolInWorkspace(e.target.checked)
+                                }
+                                className="rounded bg-zinc-800 border-zinc-700"
+                              />
+                              Запускать в проекте
+                            </label>
+                            <div className="flex gap-2">
+                              <button
+                                onClick={() => handleAddTool(ws.id)}
+                                className="px-3 py-1.5 text-xs rounded bg-blue-600 hover:bg-blue-500 text-white"
+                              >
+                                Сохранить
+                              </button>
+                              <button
+                                onClick={() => {
+                                  setAddingToolWsId(null);
+                                  setNewToolName("");
+                                  setNewToolCmd("");
+                                  setNewToolInWorkspace(true);
+                                }}
+                                className="px-3 py-1.5 text-xs rounded bg-zinc-800 hover:bg-zinc-700"
+                              >
+                                Отмена
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                        {toolCommands.map((tool) => (
+                          <div
+                            key={tool.id}
+                            className="group flex items-center justify-between px-2 py-1 rounded bg-zinc-900 hover:bg-zinc-800 text-white text-xs"
+                            title={tool.command}
                           >
-                            <Pencil size={12} />
-                          </button>
+                            <button
+                              onClick={() => handleRunTool(ws.id, tool)}
+                              className="flex-1 text-left"
+                            >
+                              <div className="font-medium">{tool.name}</div>
+                              <div className="font-mono text-zinc-400 truncate">
+                                {tool.command}
+                              </div>
+                            </button>
+                            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  beginEditTool(ws.id, tool);
+                                }}
+                                className="p-1 rounded text-zinc-400 hover:text-white hover:bg-zinc-700"
+                                title="Edit tool"
+                              >
+                                <Pencil size={12} />
+                              </button>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDeleteTool(ws.id, tool.id);
+                                }}
+                                className="p-1 rounded text-red-400 hover:text-red-300 hover:bg-red-500/10"
+                                title="Delete tool"
+                              >
+                                <Trash2 size={12} />
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                        {PROJECT_TOOLS.map((action) => (
                           <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleDeleteTool(ws.id, tool.id);
-                            }}
-                            className="p-1 rounded text-red-400 hover:text-red-300 hover:bg-red-500/10"
-                            title="Delete tool"
+                            key={action.id}
+                            onClick={() => handleQuickAction(ws.id, action)}
+                            className="w-full text-left px-2 py-1 rounded bg-zinc-900 hover:bg-zinc-800 text-white text-xs"
+                            title={action.command}
                           >
-                            <Trash2 size={12} />
+                            <div className="font-medium">{action.label}</div>
+                            <div className="font-mono text-zinc-400 truncate">
+                              {action.command}
+                            </div>
                           </button>
-                        </div>
-                      </div>
-                    ))}
-                    {QUICK_ACTIONS.map((action) => (
-                      <button
-                        key={action.id}
-                        onClick={() => handleQuickAction(ws.id, action)}
-                        className="w-full text-left px-2 py-1 rounded bg-zinc-900 hover:bg-zinc-800 text-white text-xs"
-                        title={action.command}
-                      >
-                        <div className="font-medium">{action.label}</div>
-                        <div className="font-mono text-zinc-400 truncate">
-                          {action.command}
-                        </div>
-                      </button>
-                    ))}
+                        ))}
+                      </>
+                    )}
                   </div>
                 </div>
               )}
             </div>
           );
         })}
+      </div>
+      <div className="p-2 border-t border-zinc-800">
+        <div className="text-[11px] uppercase tracking-wide text-zinc-500 mb-2">
+          Global Tools
+        </div>
+        {GLOBAL_TOOLS.map((action) => (
+          <button
+            key={action.id}
+            onClick={() => handleGlobalTool(action)}
+            className="w-full text-left px-2 py-1 rounded bg-zinc-900 hover:bg-zinc-800 text-white text-xs"
+            title={action.command}
+          >
+            <div className="font-medium">{action.label}</div>
+            <div className="font-mono text-zinc-400 truncate">
+              {action.command}
+            </div>
+          </button>
+        ))}
       </div>
       {previewCmd && (
         <div className="p-2 border-t border-zinc-800">
