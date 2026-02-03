@@ -58,6 +58,33 @@ type CommandTemplate = {
   updatedAt: string;
 };
 
+const DEFAULT_GLOBAL_TOOLS: CommandTemplate[] = [
+  {
+    id: "global-update-gemini",
+    name: "Update Gemini",
+    command: "npm update -g @google/gemini-cli",
+    category: "global-tool",
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: "global-update-claude",
+    name: "Update Claude",
+    command: "npm update -g @anthropic-ai/claude-code",
+    category: "global-tool",
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: "global-update-npm",
+    name: "Update npm",
+    command: "npm install -g npm@latest",
+    category: "global-tool",
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+];
+
 const store = new Store<{
   workspaces: Workspace[];
   projects: Project[];
@@ -69,6 +96,10 @@ const store = new Store<{
     templates: [],
   },
 });
+
+if (!store.has("templates")) {
+  store.set("templates", DEFAULT_GLOBAL_TOOLS);
+}
 
 let mainWindow: BrowserWindow | null = null;
 const ptyProcesses: Record<string, pty.IPty> = {};

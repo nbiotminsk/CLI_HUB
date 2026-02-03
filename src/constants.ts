@@ -26,24 +26,3 @@ export const PROJECT_TOOLS: QuickAction[] = [
   { id: "tool-gemini", label: "Gemini", command: "gemini", runInWorkspace: true },
   { id: "tool-claude", label: "Claude", command: "claude", runInWorkspace: true },
 ];
-
-export const GLOBAL_TOOLS: QuickAction[] = [
-  {
-    id: "update-gemini",
-    label: "Update Gemini",
-    command: "npm update -g @google/gemini-cli",
-    runInWorkspace: false,
-  },
-  {
-    id: "update-claude",
-    label: "Update Claude",
-    command: "npm update -g @anthropic-ai/claude-code",
-    runInWorkspace: false,
-  },
-  {
-    id: "update-npm",
-    label: "Update npm",
-    command: "npm install -g npm@latest",
-    runInWorkspace: false,
-  },
-];

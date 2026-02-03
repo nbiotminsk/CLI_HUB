@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 import { useWorkspaceStore } from "../store/useWorkspaceStore";
 import type { WorkspaceCommand } from "../types";
-import { PROJECT_TOOLS, GLOBAL_TOOLS } from "../constants";
+import { PROJECT_TOOLS } from "../constants";
 
 export const Sidebar: React.FC = () => {
   const {
@@ -28,6 +28,11 @@ export const Sidebar: React.FC = () => {
     deleteCommand,
     closeSession,
     stopSession,
+    templates,
+    loadTemplates,
+    addTemplate,
+    updateTemplate,
+    deleteTemplate,
     loadPackageScripts,
   } = useWorkspaceStore();
   const [expandedWsId, setExpandedWsId] = useState<string | null>(null);
@@ -50,6 +55,18 @@ export const Sidebar: React.FC = () => {
   >({});
   const [toolsOpenByWs, setToolsOpenByWs] = useState<Record<string, boolean>>(
     {},
+  );
+  const [addingGlobalTool, setAddingGlobalTool] = useState(false);
+  const [newGlobalToolName, setNewGlobalToolName] = useState("");
+  const [newGlobalToolCmd, setNewGlobalToolCmd] = useState("");
+  const [editingGlobalToolId, setEditingGlobalToolId] = useState<string | null>(
+    null,
+  );
+  const [editGlobalToolName, setEditGlobalToolName] = useState("");
+  const [editGlobalToolCmd, setEditGlobalToolCmd] = useState("");
+
+  const globalTools = templates.filter(
+    (t) => !t.category || t.category === "global-tool",
   );
   const [previewCmd, setPreviewCmd] = useState<{
     wsId: string;
@@ -80,17 +97,64 @@ export const Sidebar: React.FC = () => {
     });
   };
 
-  const handleGlobalTool = (action: (typeof GLOBAL_TOOLS)[number]) => {
+  const handleGlobalTool = (tool: { name: string; command: string }) => {
     const existing = openSessions.find(
-      (s) => s.workspaceId === "" && s.title === action.label,
+      (s) => s.workspaceId === "" && s.title === tool.name,
     );
     if (existing) {
       setActiveSession(existing.sessionId);
       return;
     }
-    openQuickCommand("", action.label, action.command, {
-      runInWorkspace: action.runInWorkspace,
+    openQuickCommand("", tool.name, tool.command, {
+      runInWorkspace: false,
     });
+  };
+
+  const handleAddGlobalTool = async () => {
+    if (!newGlobalToolName || !newGlobalToolCmd) return;
+    const now = new Date().toISOString();
+    await addTemplate({
+      id: crypto.randomUUID(),
+      name: newGlobalToolName,
+      command: newGlobalToolCmd,
+      category: "global-tool",
+      createdAt: now,
+      updatedAt: now,
+    });
+    setAddingGlobalTool(false);
+    setNewGlobalToolName("");
+    setNewGlobalToolCmd("");
+  };
+
+  const beginEditGlobalTool = (toolId: string, name: string, command: string) => {
+    setEditingGlobalToolId(toolId);
+    setEditGlobalToolName(name);
+    setEditGlobalToolCmd(command);
+    setAddingGlobalTool(false);
+  };
+
+  const handleSaveGlobalTool = async () => {
+    if (!editingGlobalToolId || !editGlobalToolName || !editGlobalToolCmd)
+      return;
+    await updateTemplate(editingGlobalToolId, {
+      name: editGlobalToolName,
+      command: editGlobalToolCmd,
+      category: "global-tool",
+    });
+    setEditingGlobalToolId(null);
+    setEditGlobalToolName("");
+    setEditGlobalToolCmd("");
+  };
+
+  const handleDeleteGlobalTool = async (toolId: string) => {
+    const ok = window.confirm("Удалить глобальную команду?");
+    if (!ok) return;
+    await deleteTemplate(toolId);
+    if (editingGlobalToolId === toolId) {
+      setEditingGlobalToolId(null);
+      setEditGlobalToolName("");
+      setEditGlobalToolCmd("");
+    }
   };
 
   const handleRunTool = (workspaceId: string, tool: WorkspaceCommand) => {
@@ -107,6 +171,10 @@ export const Sidebar: React.FC = () => {
   const handleAddWorkspace = async () => {
     await addWorkspaceFromPicker();
   };
+
+  React.useEffect(() => {
+    loadTemplates();
+  }, [loadTemplates]);
 
   const handleDeleteWorkspace = async (workspaceId: string, name: string) => {
     const ok = window.confirm(
@@ -617,21 +685,136 @@ export const Sidebar: React.FC = () => {
         })}
       </div>
       <div className="p-2 border-t border-zinc-800">
-        <div className="text-[11px] uppercase tracking-wide text-zinc-500 mb-2">
-          Global Tools
-        </div>
-        {GLOBAL_TOOLS.map((action) => (
+        <div className="flex items-center justify-between mb-2">
+          <div className="text-[11px] uppercase tracking-wide text-zinc-500">
+            Global Tools
+          </div>
           <button
-            key={action.id}
-            onClick={() => handleGlobalTool(action)}
-            className="w-full text-left px-2 py-1 rounded bg-zinc-900 hover:bg-zinc-800 text-white text-xs"
-            title={action.command}
+            onClick={() => {
+              setAddingGlobalTool(true);
+              setEditingGlobalToolId(null);
+              setEditGlobalToolName("");
+              setEditGlobalToolCmd("");
+            }}
+            className="text-[11px] text-zinc-400 hover:text-white"
+            title="Add global tool"
           >
-            <div className="font-medium">{action.label}</div>
-            <div className="font-mono text-zinc-400 truncate">
-              {action.command}
-            </div>
+            + Tool
           </button>
+        </div>
+        {editingGlobalToolId && (
+          <div className="space-y-2 p-2 border border-zinc-800 rounded mb-2">
+            <div className="text-xs text-zinc-400">
+              Редактировать глобальную команду
+            </div>
+            <input
+              value={editGlobalToolName}
+              onChange={(e) => setEditGlobalToolName(e.target.value)}
+              placeholder="Имя"
+              className="w-full bg-zinc-800 border border-zinc-700 rounded p-2 text-white"
+            />
+            <input
+              value={editGlobalToolCmd}
+              onChange={(e) => setEditGlobalToolCmd(e.target.value)}
+              placeholder="Команда"
+              className="w-full bg-zinc-800 border border-zinc-700 rounded p-2 text-white"
+            />
+            <div className="flex gap-2">
+              <button
+                onClick={handleSaveGlobalTool}
+                className="px-3 py-1.5 text-xs rounded bg-blue-600 hover:bg-blue-500 text-white"
+              >
+                Сохранить
+              </button>
+              <button
+                onClick={() => {
+                  setEditingGlobalToolId(null);
+                  setEditGlobalToolName("");
+                  setEditGlobalToolCmd("");
+                }}
+                className="px-3 py-1.5 text-xs rounded bg-zinc-800 hover:bg-zinc-700"
+              >
+                Отмена
+              </button>
+            </div>
+          </div>
+        )}
+        {addingGlobalTool && (
+          <div className="space-y-2 p-2 border border-zinc-800 rounded mb-2">
+            <div className="text-xs text-zinc-400">Новая глобальная команда</div>
+            <input
+              value={newGlobalToolName}
+              onChange={(e) => setNewGlobalToolName(e.target.value)}
+              placeholder="Имя"
+              className="w-full bg-zinc-800 border border-zinc-700 rounded p-2 text-white"
+            />
+            <input
+              value={newGlobalToolCmd}
+              onChange={(e) => setNewGlobalToolCmd(e.target.value)}
+              placeholder="Команда"
+              className="w-full bg-zinc-800 border border-zinc-700 rounded p-2 text-white"
+            />
+            <div className="flex gap-2">
+              <button
+                onClick={handleAddGlobalTool}
+                className="px-3 py-1.5 text-xs rounded bg-blue-600 hover:bg-blue-500 text-white"
+              >
+                Сохранить
+              </button>
+              <button
+                onClick={() => {
+                  setAddingGlobalTool(false);
+                  setNewGlobalToolName("");
+                  setNewGlobalToolCmd("");
+                }}
+                className="px-3 py-1.5 text-xs rounded bg-zinc-800 hover:bg-zinc-700"
+              >
+                Отмена
+              </button>
+            </div>
+          </div>
+        )}
+        {globalTools.length === 0 && (
+          <div className="text-xs text-zinc-600">Нет глобальных команд</div>
+        )}
+        {globalTools.map((tool) => (
+          <div
+            key={tool.id}
+            className="group flex items-center justify-between px-2 py-1 rounded bg-zinc-900 hover:bg-zinc-800 text-white text-xs"
+            title={tool.command}
+          >
+            <button
+              onClick={() => handleGlobalTool(tool)}
+              className="flex-1 text-left"
+            >
+              <div className="font-medium">{tool.name}</div>
+              <div className="font-mono text-zinc-400 truncate">
+                {tool.command}
+              </div>
+            </button>
+            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  beginEditGlobalTool(tool.id, tool.name, tool.command);
+                }}
+                className="p-1 rounded text-zinc-400 hover:text-white hover:bg-zinc-700"
+                title="Edit global tool"
+              >
+                <Pencil size={12} />
+              </button>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleDeleteGlobalTool(tool.id);
+                }}
+                className="p-1 rounded text-red-400 hover:text-red-300 hover:bg-red-500/10"
+                title="Delete global tool"
+              >
+                <Trash2 size={12} />
+              </button>
+            </div>
+          </div>
         ))}
       </div>
       {previewCmd && (
