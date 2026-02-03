@@ -112,8 +112,12 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
     const cwd = session.cwd || "";
     const workspaceId = session.workspaceId;
     const commandId = session.commandId;
-    await electronAPI.startProcess(sessionId, "", cwd);
+    const started = await electronAPI.startProcess(sessionId, "", cwd);
     const status = await electronAPI.getProcessStatus(sessionId);
+    const isRunning =
+      status.isRunning ||
+      started.status === "started" ||
+      started.status === "running";
     if (workspaceId && commandId) {
       try {
         await get().updateCommand(workspaceId, commandId, {
@@ -128,8 +132,8 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
         s.sessionId === sessionId
           ? {
               ...s,
-              running: status.isRunning,
-              pid: status.pid,
+              running: isRunning,
+              pid: status.pid ?? started.pid,
               commandId: s.keepOpen ? s.commandId : "",
             }
           : s,
@@ -290,15 +294,19 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
     const sessionId = crypto.randomUUID();
     const runInWorkspace = cmd.runInWorkspace !== false;
     const cwd = runInWorkspace ? cmd.cwd || ws.path : "";
-    await electronAPI.startProcess(sessionId, cmd.command, cwd);
+    const started = await electronAPI.startProcess(sessionId, cmd.command, cwd);
     const status = await electronAPI.getProcessStatus(sessionId);
+    const isRunning =
+      status.isRunning ||
+      started.status === "started" ||
+      started.status === "running";
     const session: Session = {
       sessionId,
       workspaceId,
       commandId,
       title: cmd.name,
-      running: status.isRunning,
-      pid: status.pid,
+      running: isRunning,
+      pid: status.pid ?? started.pid,
       cwd,
       keepOpen: cmd.category === "tool",
     };
@@ -316,16 +324,20 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
     const useWorkspace = options?.runInWorkspace !== false;
     const cwd = useWorkspace ? ws?.path ?? "" : "";
     const sessionId = crypto.randomUUID();
-    await electronAPI.startProcess(sessionId, command, cwd);
+    const started = await electronAPI.startProcess(sessionId, command, cwd);
     const status = await electronAPI.getProcessStatus(sessionId);
+    const isRunning =
+      status.isRunning ||
+      started.status === "started" ||
+      started.status === "running";
 
     const session: Session = {
       sessionId,
       workspaceId: ws?.id ?? "",
       commandId: "",
       title,
-      running: status.isRunning,
-      pid: status.pid,
+      running: isRunning,
+      pid: status.pid ?? started.pid,
       cwd,
       keepOpen: true,
     };
@@ -350,16 +362,20 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
 
     const sessionId = crypto.randomUUID();
     // Start generic shell
-    await electronAPI.startProcess(sessionId, "", cwd);
+    const started = await electronAPI.startProcess(sessionId, "", cwd);
     const status = await electronAPI.getProcessStatus(sessionId);
+    const isRunning =
+      status.isRunning ||
+      started.status === "started" ||
+      started.status === "running";
 
     const session: Session = {
       sessionId,
       workspaceId: workspaceId || "",
       commandId: "",
       title: title,
-      running: status.isRunning,
-      pid: status.pid,
+      running: isRunning,
+      pid: status.pid ?? started.pid,
       cwd,
       keepOpen: false,
     };
