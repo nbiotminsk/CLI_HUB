@@ -33,6 +33,18 @@
         "zip"
       ]
     },
+    "win": {
+      "target": [
+        "nsis",
+        "zip"
+      ]
+    },
+    "linux": {
+      "target": [
+        "AppImage",
+        "deb"
+      ]
+    },
     "publish": [
       {
         "provider": "github"
