@@ -15,6 +15,7 @@
     "dev:electron": "npm run electron:build && concurrently -k \"npm run dev\" \"npm run electron:build -- -w\" \"npm run electron\"",
     "postinstall": "electron-builder install-app-deps",
     "dist": "npm run build && electron-builder",
+    "dist:app": "npm run build && electron-builder --mac --dir",
     "test": "vitest run",
     "test:watch": "vitest"
   },
