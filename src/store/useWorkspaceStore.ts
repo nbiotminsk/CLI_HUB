@@ -15,6 +15,7 @@ type Session = {
   pid?: number;
   cwd?: string;
   keepOpen?: boolean;
+  clearCounter?: number;
 };
 
 interface WorkspaceState {
@@ -67,6 +68,7 @@ interface WorkspaceState {
   prevSession: () => void;
   setWindowFocused: (focused: boolean) => void;
   restartSessionToShell: (sessionId: string) => Promise<void>;
+  clearSession: (sessionId: string) => void;
   restartSessionWithCommand: (
     sessionId: string,
     command: string,
@@ -142,6 +144,15 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
               pid: status.pid ?? started.pid,
               commandId: s.keepOpen ? s.commandId : "",
             }
+          : s,
+      ),
+    }));
+  },
+  clearSession: (sessionId) => {
+    set((state) => ({
+      openSessions: state.openSessions.map((s) =>
+        s.sessionId === sessionId
+          ? { ...s, clearCounter: (s.clearCounter ?? 0) + 1 }
           : s,
       ),
     }));
@@ -340,6 +351,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
       pid: status.pid ?? started.pid,
       cwd,
       keepOpen: cmd.category === "tool",
+      clearCounter: 0,
     };
     set((state) => ({
       openSessions: [...state.openSessions, session],
@@ -371,6 +383,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
       pid: status.pid ?? started.pid,
       cwd,
       keepOpen: true,
+      clearCounter: 0,
     };
 
     set((state) => ({
@@ -409,6 +422,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
       pid: status.pid ?? started.pid,
       cwd,
       keepOpen: false,
+      clearCounter: 0,
     };
 
     set((state) => ({

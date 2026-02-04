@@ -12,7 +12,7 @@ const PortsMonitorLazy = React.lazy(() =>
   })),
 );
 import { useWorkspaceStore } from "./store/useWorkspaceStore";
-import { Play, Square, Zap, Plus, X } from "lucide-react";
+import { Play, Square, Zap, Plus, X, Trash2 } from "lucide-react";
 import { electronAPI } from "./lib/electron";
 
 function App() {
@@ -24,6 +24,7 @@ function App() {
     stopSession,
     stopAllSessions,
     interruptSession,
+    clearSession,
     createTerminalSession,
     closeSession,
   } = useWorkspaceStore();
@@ -167,6 +168,15 @@ function App() {
               {activeSession && (
                 <>
                   <button
+                    onClick={() => clearSession(activeSession.sessionId)}
+                    className="flex items-center gap-2 px-3 py-1.5 text-xs rounded bg-zinc-800 hover:bg-zinc-700 transition-colors"
+                    aria-label="Clear terminal"
+                    title="Clear"
+                  >
+                    <Trash2 size={14} aria-hidden="true" />
+                    Clear
+                  </button>
+                  <button
                     onClick={() => interruptSession(activeSession.sessionId)}
                     disabled={!activeSession.running}
                     className="flex items-center gap-2 px-3 py-1.5 text-xs rounded bg-zinc-800 hover:bg-zinc-700 disabled:opacity-40 disabled:hover:bg-zinc-800 transition-colors"
@@ -298,6 +308,7 @@ function App() {
                       <TerminalViewLazy
                         projectId={session.sessionId}
                         isActive={isActive}
+                        clearCounter={session.clearCounter}
                       />
                     </Suspense>
                   </div>

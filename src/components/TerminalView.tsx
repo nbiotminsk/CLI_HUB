@@ -7,11 +7,13 @@ import { electronAPI, isElectron } from "../lib/electron";
 interface TerminalViewProps {
   projectId: string;
   isActive: boolean;
+  clearCounter?: number;
 }
 
 export const TerminalView: React.FC<TerminalViewProps> = ({
   projectId,
   isActive,
+  clearCounter,
 }) => {
   const terminalRef = useRef<HTMLDivElement>(null);
   const xtermRef = useRef<Terminal | null>(null);
@@ -132,6 +134,17 @@ export const TerminalView: React.FC<TerminalViewProps> = ({
       });
     }
   }, [isActive, projectId]);
+
+  useEffect(() => {
+    if (!isElectron) return;
+    if (!xtermRef.current || !readyRef.current) return;
+    if (clearCounter == null) return;
+    try {
+      xtermRef.current.clear();
+    } catch {
+      // Clear may fail if terminal is not ready
+    }
+  }, [clearCounter]);
 
   return <div className="w-full h-full bg-black p-2" ref={terminalRef} />;
 };

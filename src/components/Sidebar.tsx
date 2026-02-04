@@ -30,6 +30,7 @@ export const Sidebar: React.FC = () => {
     deleteCommand,
     closeSession,
     restartSessionWithCommand,
+    clearSession,
     stopSession,
     templates,
     loadTemplates,
@@ -102,6 +103,7 @@ export const Sidebar: React.FC = () => {
       (s) => s.workspaceId === workspaceId && s.title === action.label,
     );
     if (existingSession) {
+      clearSession(existingSession.sessionId);
       const ws = workspaces.find((w) => w.id === workspaceId);
       const cwd =
         action.runInWorkspace === false ? "" : ws?.path ?? "";
@@ -130,6 +132,7 @@ export const Sidebar: React.FC = () => {
       (s) => s.workspaceId === "" && s.title === tool.name,
     );
     if (existingSession) {
+      clearSession(existingSession.sessionId);
       restartSessionWithCommand(existingSession.sessionId, tool.command, "", {
         keepOpen: true,
         title: tool.name,
@@ -207,6 +210,7 @@ export const Sidebar: React.FC = () => {
         (s.commandId === tool.id || s.title === tool.name),
     );
     if (existingSession) {
+      clearSession(existingSession.sessionId);
       const ws = workspaces.find((w) => w.id === workspaceId);
       const cwd =
         tool.runInWorkspace === false ? "" : ws?.path ?? "";
