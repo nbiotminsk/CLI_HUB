@@ -4,6 +4,10 @@
   "version": "0.0.0",
   "main": "dist-electron/main.js",
   "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/nbiotminsk/CLI_HUB"
+  },
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && tsc -p tsconfig.electron.json && vite build",
@@ -29,6 +33,11 @@
         "zip"
       ]
     },
+    "publish": [
+      {
+        "provider": "github"
+      }
+    ],
     "files": [
       "dist/**/*",
       "dist-electron/**/*"
