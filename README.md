@@ -52,6 +52,11 @@
 
 ### 🚀 Getting Started
 
+### ⬇️ Downloads
+
+Download the latest builds from GitHub Releases:
+[Latest Release](https://github.com/nbiotminsk/CLI_HUB/releases/latest)
+
 1.  **Clone the Repo**:
     ```bash
     git clone https://github.com/nbiotminsk/CLI_HUB.git
@@ -96,6 +101,11 @@
 | `Escape` | Закрыть модальное окно |
 
 ### 🚀 Быстрый старт
+
+### ⬇️ Скачивание
+
+Последние сборки находятся в GitHub Releases:
+[Последний релиз](https://github.com/nbiotminsk/CLI_HUB/releases/latest)
 
 1.  **Установка**:
     ```bash
