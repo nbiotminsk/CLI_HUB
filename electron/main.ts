@@ -885,6 +885,8 @@ ipcMain.handle(
 
     ptyProcess.onExit(({ exitCode }) => {
       delete ptyProcesses[projectId];
+      delete stopPromises[projectId];
+      delete shellOnlyByProject[projectId];
       if (isShuttingDown) return;
       try {
         const win = mainWindow;
