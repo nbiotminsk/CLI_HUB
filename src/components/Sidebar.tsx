@@ -29,6 +29,7 @@ export const Sidebar: React.FC = () => {
     updateCommand,
     deleteCommand,
     closeSession,
+    restartSessionWithCommand,
     stopSession,
     templates,
     loadTemplates,
@@ -78,13 +79,6 @@ export const Sidebar: React.FC = () => {
   const toNpmScriptCommand = (name: string) =>
     name === "start" ? "npm start" : `npm run ${name}`;
 
-  const closeStaleSessions = (predicate: (s: typeof openSessions[number]) => boolean) => {
-    const stale = openSessions.filter((s) => !s.running && predicate(s));
-    stale.forEach((s) => {
-      void closeSession(s.sessionId);
-    });
-  };
-
   const handleRunScript = (workspaceId: string, name: string) => {
     const command = toNpmScriptCommand(name);
     openQuickCommand(workspaceId, command, command);
@@ -104,9 +98,21 @@ export const Sidebar: React.FC = () => {
       setActiveSession(runningSession.sessionId);
       return;
     }
-    closeStaleSessions(
+    const existingSession = openSessions.find(
       (s) => s.workspaceId === workspaceId && s.title === action.label,
     );
+    if (existingSession) {
+      const ws = workspaces.find((w) => w.id === workspaceId);
+      const cwd =
+        action.runInWorkspace === false ? "" : ws?.path ?? "";
+      restartSessionWithCommand(existingSession.sessionId, action.command, cwd, {
+        keepOpen: true,
+        title: action.label,
+        workspaceId,
+        commandId: "",
+      });
+      return;
+    }
     openQuickCommand(workspaceId, action.label, action.command, {
       runInWorkspace: action.runInWorkspace,
     });
@@ -120,7 +126,18 @@ export const Sidebar: React.FC = () => {
       setActiveSession(runningSession.sessionId);
       return;
     }
-    closeStaleSessions((s) => s.workspaceId === "" && s.title === tool.name);
+    const existingSession = openSessions.find(
+      (s) => s.workspaceId === "" && s.title === tool.name,
+    );
+    if (existingSession) {
+      restartSessionWithCommand(existingSession.sessionId, tool.command, "", {
+        keepOpen: true,
+        title: tool.name,
+        workspaceId: "",
+        commandId: "",
+      });
+      return;
+    }
     openQuickCommand("", tool.name, tool.command, {
       runInWorkspace: false,
     });
@@ -184,11 +201,23 @@ export const Sidebar: React.FC = () => {
       setActiveSession(runningSession.sessionId);
       return;
     }
-    closeStaleSessions(
+    const existingSession = openSessions.find(
       (s) =>
         s.workspaceId === workspaceId &&
         (s.commandId === tool.id || s.title === tool.name),
     );
+    if (existingSession) {
+      const ws = workspaces.find((w) => w.id === workspaceId);
+      const cwd =
+        tool.runInWorkspace === false ? "" : ws?.path ?? "";
+      restartSessionWithCommand(existingSession.sessionId, tool.command, cwd, {
+        keepOpen: true,
+        title: tool.name,
+        workspaceId,
+        commandId: tool.id,
+      });
+      return;
+    }
     openCommand(workspaceId, tool.id);
   };
 

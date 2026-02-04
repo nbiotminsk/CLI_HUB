@@ -67,6 +67,12 @@ interface WorkspaceState {
   prevSession: () => void;
   setWindowFocused: (focused: boolean) => void;
   restartSessionToShell: (sessionId: string) => Promise<void>;
+  restartSessionWithCommand: (
+    sessionId: string,
+    command: string,
+    cwd: string,
+    updates?: Partial<Session>,
+  ) => Promise<void>;
 
   restoreAutoSessions: () => Promise<void>;
 }
@@ -138,6 +144,31 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
             }
           : s,
       ),
+    }));
+  },
+  restartSessionWithCommand: async (sessionId, command, cwd, updates) => {
+    const st = get();
+    const session = st.openSessions.find((s) => s.sessionId === sessionId);
+    if (!session) return;
+    const started = await electronAPI.startProcess(sessionId, command, cwd);
+    const status = await electronAPI.getProcessStatus(sessionId);
+    const isRunning =
+      status.isRunning ||
+      started.status === "started" ||
+      started.status === "running";
+    set((state) => ({
+      openSessions: state.openSessions.map((s) =>
+        s.sessionId === sessionId
+          ? {
+              ...s,
+              ...updates,
+              running: isRunning,
+              pid: status.pid ?? started.pid,
+              cwd,
+            }
+          : s,
+      ),
+      activeSessionId: sessionId,
     }));
   },
 
